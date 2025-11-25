@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String                 @id @default(uuid())
+  email        String                 @unique
+  name         String?
+  createdAt    DateTime               @default(now())
+  institutions FinancialInstitution[]
+  products     FinancialProduct[]
+  categories   Category[]
+  transactions Transaction[]
+  debts        Debt[]
+  summaries    CreditCardSummary[]
+}
+
+model Category {
+  id           String        @id @default(uuid())
+  name         String
+  icon         String?
+  categoryType CategoryType  @default(EXPENSE)
+  isSystem     Boolean       @default(false)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+}
+
+model Transaction {
+  id                String          @id @default(uuid())
+  amount            Decimal
+  date              DateTime
+  description       String
+  status            String          @default("COMPLETED")
+  type              TransactionType
+  categoryId        String?
+  category          Category?       @relation(fields: [categoryId], references: [id])
+  installmentNumber Int?
+  installmentTotal  Int?
+  installmentId     String?         // ID to group installments of the same purchase
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+
+  // New Relations
+  fromProductId String
+  fromProduct   FinancialProduct @relation("FromProduct", fields: [fromProductId], references: [id])
+  toProductId   String?
+  toProduct     FinancialProduct? @relation("ToProduct", fields: [toProductId], references: [id])
+}
+
+model Debt {
+  id              String    @id @default(uuid())
+  name            String
+  totalAmount     Decimal
+  remainingAmount Decimal
+  interestRate    Decimal?
+  dueDate         DateTime?
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+}
+
+model FinancialInstitution {
+  id        String             @id @default(uuid())
+  name      String
+  type      InstitutionType
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products  FinancialProduct[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@unique([userId, name])
+}
+
+model FinancialProduct {
+  id                 String               @id @default(uuid())
+  name               String
+  type               ProductType
+  currency           Currency             @default(ARS)
+  balance            Decimal              @default(0.0)
+  closingDay         Int?
+  dueDay             Int?
+  limit              Decimal?
+  sharedLimit        Boolean              @default(false) // Si comparte límite con otras tarjetas
+  institutionId      String?
+  institution        FinancialInstitution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionsOrigin Transaction[]        @relation("FromProduct")
+  transactionsDest   Transaction[]        @relation("ToProduct")
+  summaries          CreditCardSummary[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@unique([institutionId, name, currency, userId])
+}
+
+model CreditCardSummary {
+  id                String           @id @default(uuid())
+  productId         String
+  product           FinancialProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  year              Int
+  month             Int              // 1-12
+  closingDate       DateTime         // Fecha de cierre del resumen
+  dueDate           DateTime         // Fecha de vencimiento
+  totalAmount       Decimal          @default(0.0) // Total a pagar
+  isClosed          Boolean          @default(false) // false = Parcial, true = Definitivo
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([productId, year, month])
+  @@index([userId, productId])
+}
+
+model ExchangeRate {
+  id           String   @id @default(uuid())
+  fromCurrency Currency
+  toCurrency   Currency
+  rate         Decimal
+  timestamp    DateTime @default(now())
+
+  @@unique([fromCurrency, toCurrency, timestamp])
+  @@index([timestamp])
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum InstitutionType {
+  BANK
+  WALLET
+}
+
+enum ProductType {
+  CASH
+  SAVINGS_ACCOUNT
+  CHECKING_ACCOUNT
+  DEBIT_CARD
+  CREDIT_CARD
+  LOAN
+}
+
+enum Currency {
+  ARS
+  USD
+  USDT
+  USDC
+  BTC
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}

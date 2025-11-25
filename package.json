@@ -1,0 +1,38 @@
+{
+  "name": "tuli",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "dev:clean": "lsof -ti:3000,3001,3002 | xargs kill -9 2>/dev/null || true && next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "stop": "lsof -ti:3000,3001,3002 | xargs kill -9 2>/dev/null || echo 'No hay servidores corriendo'",
+    "prisma:studio": "prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^6.0.0",
+    "@prisma/client": "^6.0.0",
+    "@types/uuid": "^10.0.0",
+    "next": "^15.0.0",
+    "pg": "^8.16.3",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "uuid": "^13.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.15.6",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "dotenv": "^17.2.3",
+    "postcss": "^8.4.49",
+    "prisma": "^6.0.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.0.0"
+  }
+}
