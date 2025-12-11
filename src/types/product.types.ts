@@ -9,10 +9,32 @@ export interface Product {
     balance: number;
     closingDay?: number | null;
     dueDay?: number | null;
-    limit?: number | null;
+    limit?: number | null; // Deprecated
+    limitSinglePayment?: number | null;
+    limitInstallments?: number | null;
     sharedLimit?: boolean;
+    unifiedLimit?: boolean;
     institutionId?: string | null;
+    linkedProductId?: string | null;
+    lastFourDigits?: string | null;
+    provider?: CardProvider | null;
 }
+
+export type CardProvider = 'VISA' | 'MASTERCARD' | 'AMEX' | 'OTHER';
+
+export const CARD_PROVIDER_LOGOS: Record<CardProvider, string> = {
+    VISA: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg',
+    MASTERCARD: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg',
+    AMEX: 'https://upload.wikimedia.org/wikipedia/commons/3/30/American_Express_logo.svg',
+    OTHER: '',
+};
+
+export const CARD_PROVIDER_LABELS: Record<CardProvider, string> = {
+    VISA: 'Visa',
+    MASTERCARD: 'Mastercard',
+    AMEX: 'American Express',
+    OTHER: 'Otro',
+};
 
 export interface ProductWithInstitution extends Product {
     institution?: Institution | null;

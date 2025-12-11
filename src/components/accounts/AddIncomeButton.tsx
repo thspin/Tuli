@@ -70,8 +70,7 @@ export default function AddIncomeButton({ institutions, cashProducts }: AddIncom
     const availableProducts = rawAvailableProducts.filter(p =>
         p.type === 'CASH' ||
         p.type === 'SAVINGS_ACCOUNT' ||
-        p.type === 'CHECKING_ACCOUNT' ||
-        p.type === 'DEBIT_CARD'
+        p.type === 'CHECKING_ACCOUNT'
     );
 
     // Reset product when institution changes
@@ -180,7 +179,11 @@ export default function AddIncomeButton({ institutions, cashProducts }: AddIncom
                             {/* 3. Cuenta / Producto */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Cuenta / Producto *
+                                    {selectedInstitutionId === 'CASH'
+                                        ? 'Efectivo *'
+                                        : selectedInstitutionId
+                                            ? 'Cuenta / Tarjeta *'
+                                            : 'Cuenta / Producto *'}
                                 </label>
                                 <select
                                     name="productId"
@@ -193,7 +196,9 @@ export default function AddIncomeButton({ institutions, cashProducts }: AddIncom
                                     <option value="">
                                         {!selectedInstitutionId
                                             ? 'Seleccione una institución primero'
-                                            : 'Seleccionar cuenta...'}
+                                            : availableProducts.length > 1
+                                                ? `Seleccionar (${availableProducts.length} disponibles)...`
+                                                : 'Seleccionar...'}
                                     </option>
                                     {availableProducts.map(product => (
                                         <option key={product.id} value={product.id}>
@@ -201,6 +206,11 @@ export default function AddIncomeButton({ institutions, cashProducts }: AddIncom
                                         </option>
                                     ))}
                                 </select>
+                                {selectedInstitutionId && availableProducts.length > 1 && !selectedProductId && (
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        💡 Esta institución tiene {availableProducts.length} cuentas disponibles. Seleccione donde ingresará el dinero.
+                                    </p>
+                                )}
                                 <p className="mt-1 text-xs text-gray-500">
                                     Nota: No se puede ingresar dinero en tarjetas de crédito o préstamos
                                 </p>

@@ -1,109 +1,430 @@
-# Finance Tracker - PRD (Product Requirements Document)
+# Tuli - PRD (Product Requirements Document)
 
-## 1. OBJETIVO DEL PROYECTO
-**Pregunta**: ¿Cuál es el objetivo principal de esta aplicación? 
-¿Qué problema específico quieres resolver?
-
-Tu respuesta:
-El objetivo de esta aplicación es poder traquear íntegramente las finanzas personales de una persona para su posterior procesamiento, y que estos datos sirvan para que un agente de inteligencia artificial pueda ayudarlo a llegar a sus objetivos de ahorro e inversión.
-
-Los problemas específicos son muchos, pero podríamos sintetizarlos en dos a las personas se les hace muy tedioso tener que estar llevando un control y un traqueo de todos sus gastos e ingresos y además a menudo sus acciones financieras son ejecutadas por impulsos y sentimientos que por un plan concreto.
+## Estado del Proyecto: ✅ Fase 1 Completada | 🚧 Fase 2 en Progreso
 
 ---
 
-## 2. MVP (Versión Mínima Viable)
-**Pregunta**: ¿Cuáles son las 3-5 funcionalidades MÍNIMAS que necesitas 
-para considerar que la app funciona? (Ya mencionaste: formulario de cuentas, 
-formulario de transacciones, mini dashboard. ¿Algo más?)
+## 🗺️ ROADMAP DEL PROYECTO
 
-Tu respuesta:
-Si tenemos que hablar de una mínima versión, esta debería permitirme que yo simule o creer dentro de mi aplicación todas las cuentas financieras con sus productos. Además, me debería permitir mediante un formulario crear las transacciones que ejecuto cuando me ingresa dinero cuando hago gastos o cuando me adeudo o pido un crédito asimismo cuando los pago. Una tercera función importante es poder en alguna parte del mes hacer un Stop y que rápidamente un Dashboard me de un pantallazo de cuánto dinero tengo cuánto dinero debo cuánto llevo gastado en que rubros en qué categorías y si estoy cumpliendo con mi objetivo del mes o del cuatrimestre o el anual que me propuse.
+### 📍 Fase 1: Fundamentos (✅ COMPLETADA)
 
----
+**Objetivo:** Establecer la base del sistema de gestión financiera
 
-## 3. REGLAS DE NEGOCIO - Cuentas
-**Pregunta 3.1**: ¿Qué tipos de cuentas quieres manejar? 
-(Ej: efectivo, banco, tarjeta de crédito, inversiones, etc.)
+- ✅ **Gestión de cuentas y productos**
+  - Instituciones financieras (Bancos, Billeteras)
+  - Productos (Tarjetas, Préstamos, Cuentas)
+  - Gestión de efectivo
+  
+- ✅ **Transacciones (ingresos/egresos)**
+  - Formularios de creación
+  - Edición y eliminación
+  - Soporte para cuotas
+  
+- ✅ **Categorización manual**
+  - Crear/editar/eliminar categorías
+  - Categorías de sistema
+  - Iconos personalizables
 
-Tu respuesta:
-Vamos a manejar efectivo, bancos, tanto en cajas de ahorros como en cuenta, corriente, tarjetas de crédito bancarizadas y no bancarizadas, préstamos, créditos, seguros, etc.
-
-**Pregunta 3.2**: ¿Qué información MÍNIMA necesitas guardar de cada cuenta?
-(Ej: nombre, tipo, saldo inicial, moneda)
-
-Tu respuesta:
-La información mínima que necesitamos de cada cuenta puede variar, pero en general necesitaremos saber de qué institución financiera es el producto cuál es el producto si tiene fecha de vencimiento o fecha de cierre, si tiene límites de uso, cuál es su saldo, qué monedas puede operar si el producto es gratuito o está bonificado, y si esa bonificación necesita de alguna acción en el mes tener un calendario, un recordatorio para no olvidarlo.
-
-**Pregunta 3.3**: ¿Un usuario puede tener varias cuentas del mismo tipo?
-(Ej: dos cuentas de banco diferentes)
-
-Tu respuesta:
-Sí, un usuario puede tener varias cuentas del mismo tipo, por ejemplo dos cuentas de banco diferentes.
+**Estado:** ✅ 100% Completada
 
 ---
 
-## 4. REGLAS DE NEGOCIO - Transacciones
-**Pregunta 4.1**: ¿Qué tipos de transacciones quieres registrar?
-(Ej: ingreso, egreso, transferencia entre cuentas, deuda)
+### 📍 Fase 2: Experiencia de Usuario (🚧 EN PROGRESO)
 
-Tu respuesta:
-Vamos a manejar ingresos, egresos, transferencias entre cuentas y deudas. en las deudas cabe aclarar que pueden ser deudas contraídas por tarjetas de crédito, deudas contraídas por un préstamo o deudas contraídas por fiado, es decir que se le debe a una persona, pero eso no es tras registrado en ninguna aplicación.
+**Objetivo:** Mejorar la experiencia visual y funcionalidades core
 
-**Pregunta 4.2**: ¿Qué información MÍNIMA necesitas de cada transacción?
-(Ej: monto, categoría, fecha, descripción)
+- ✅ **Resúmenes de tarjetas**
+  - Generación automática mensual
+  - Visualización de transacciones
+  - Proceso de pago
+  
+- ✅ **Multi-moneda**
+  - Soporte ARS, USD, CRYPTO
+  - Conversión automática
+  - Visualización por moneda
+  
+- ✅ **Sistema de temas**
+  - 3 temas (Light, Dark, Blue-Sober)
+  - Persistencia de preferencias
+  - Variables CSS OKLCH
+  
+- ✅ **UI moderna**
+  - Componentes reutilizables
+  - Diseño responsive
+  - Animaciones suaves
+  
+- ❌ **Gestor de Servicios** (PENDIENTE)
+  - Registro de servicios recurrentes
+  - Alertas de vencimiento
+  - Pago automático de servicios
+  - Historial de pagos
 
-Tu respuesta:
-La información mínima que necesitamos de cada transacción puede variar, pero en general necesitaremos saber el monto, la fecha, la descripción, la categoría y la cuenta de origen y de destino. Es decir, necesito saber de cada transacción cuál fue el monto cuando se hizo una pequeña descripción que me indique algo por si me olvide cuál es que me digas desde qué cuenta salió hacia que cuenta fue y que asuma una categoría para poder hacer un resumen en el futuro esto al principio el usuario debería poder elegir la categoría pero a medida de que alguna gente aprenda de cuáles son las descripciones y esas descripciones a qué categoría corresponden esto podría empezar a probarse de automatizarse entonces por ejemplo si yo gasto en un supermercado en la gente ya debería saber que el gasto es de Mercado y no de salud.
-
-**Pregunta 4.3**: ¿Quieres que las transacciones tengan categorías predefinidas 
-o el usuario las escribe libremente?
-
-Tu respuesta:
-La idea es que el usuario pueda escribir libremente la descripción de la transacción y que el agente de IA pueda clasificarla en una categoría. Aunque no me molestaría en una primera versión que el usuario pueda agregar o eliminar categorías y que después pueda seleccionarlas para su propio uso.
-
-**Pregunta 4.4**: Si te equivocas al cargar una transacción, ¿prefieres poder 
-borrarla completamente o solo marcarla como "cancelada" pero mantenerla en 
-el historial?
-
-Tu respuesta:
-Lo importante es que el usuario tenga pleno control de todos sus datos, por lo tanto, si se equivoca al cargar una transacción debería poder modificarla o eliminarla.
-
----
-
-## 5. REGLAS DE NEGOCIO - Deudas
-**Pregunta 5.1**: Mencionaste "deudas". ¿Las deudas son:
-a) Transacciones normales con una categoría "deuda"?
-b) Una entidad separada que tiene pagos parciales?
-c) Otro modelo?
-
-Tu respuesta:
-La idea es que las deudas sean una entidad separada que tiene pagos parciales. Por lo tanto, si se pide un préstamo o un crédito, se debe registrar como una deuda y se debe registrar el pago parcial que se hizo. Además, las deudas tienen intereses que tienen que estar explícitos tienen fechas de pago, se pueden hacer en muchas cuotas, Y estas cuotas se ingresan en determinadas fechas y a veces ingresan en los resúmenes de las tarjetas de crédito y yo debería poder en algún punto del mes saber cuál es el monto del próximo resumen para no tener que esperar que Aylen te financiero me lo envíe a mi correo.
-
-**Pregunta 5.2**: ¿Una deuda puede tener cuotas o pagos parciales?
-
-Tu respuesta:
-La idea es que las deudas puedan tener cuotas o pagos parciales. Pues tener cuotas pagos parciales, pero también puede pagarse en una sola vez.
+**Estado:** 🚧 80% Completada (falta Gestor de Servicios)
 
 ---
 
-## 6. DASHBOARD
-**Pregunta 6.1**: En el mini dashboard del MVP, ¿qué 3-5 datos MÁS IMPORTANTES 
-quieres ver? (Ej: saldo total, gastos del mes, ingresos del mes, 
-últimas 5 transacciones, gráfico simple)
+### 📍 Fase 3: Automatización e Inteligencia (❌ PLANIFICADA)
 
-Tu respuesta:
-Saldo total, gastos del mes, ingresos del mes, últimas 5 transacciones, gráfico simple. Esto no es un aspecto que al principio nos interesa, porque después el Dashboard seguramente se complejísima mucho.
+**Objetivo:** Automatizar procesos y agregar capacidades inteligentes
+
+- ❌ **WhatsApp Integration**
+  - Carga de transacciones por texto
+  - Carga por audio
+  - Carga por fotos de tickets
+  - Consultas de saldo
+  - Notificaciones de vencimientos
+  
+- ❌ **Calendario Financiero**
+  - Vista mensual de vencimientos
+  - Recordatorios de pagos
+  - Planificación de gastos futuros
+  - Integración con resúmenes
+  
+- ❌ **Clasificación automática de categorías**
+  - ML para categorización
+  - Aprendizaje del comportamiento
+  - Sugerencias de categorías
+  - Mejora continua
+  
+- ❌ **Metas de ahorro e inversión**
+  - Definir objetivos financieros
+  - Tracking de progreso
+  - Alertas de desviación
+  - Sugerencias de ahorro
+  
+- ❌ **Transferencias entre cuentas**
+  - Mover dinero entre productos
+  - Historial de transferencias
+  - Validación de saldos
+
+**Estado:** ❌ 0% Completada
+
+**Estimación:** 3-4 meses de desarrollo
 
 ---
 
-## 7. FUTURO (post-MVP) - Prioridades
-**Pregunta 7.1**: Después del MVP, ¿cuál es la PRIMERA funcionalidad que 
-quieres agregar? (Mencionaste: WhatsApp, agente IA, metas de ahorro)
+### 📍 Fase 4: Análisis Avanzado e IA (❌ VISIÓN FUTURA)
 
-Tu respuesta:
-WhatsApp, agente IA, metas de ahorro. Quiero que todo lo que se cargue por un formulario en el futuro uno lo pueda cargar por WhatsApp ya sea con texto o con audios o fotos. Además quiero que una gente inteligencia artificial aprenda de el comportamiento del usuario y puedas recomendarle, gastos, promociones, inversiones ahorros y lo ayude a llegar a sus metas, limitándole los gastos y recordándole todos los días los vencimientos para que estos no se pasen de fecha. Sería como tener un asesor financiero en tu teléfono.
+**Objetivo:** Convertir Tuli en un asesor financiero inteligente
 
+- ❌ **Dashboard con gráficos avanzados**
+  - Gráficos de gastos por categoría
+  - Tendencias mensuales/anuales
+  - Comparativas período a período
+  - Proyecciones futuras
+  - Análisis de patrones de gasto
+  
+- ❌ **Control de Inversiones/Seguros**
+  - Registro de inversiones
+  - Tracking de rendimientos
+  - Gestión de seguros
+  - Alertas de renovación
+  - Portfolio diversificado
+  
+- ❌ **Agente IA nativo**
+  - Asistente conversacional
+  - Recomendaciones personalizadas
+  - Detección de gastos anómalos
+  - Optimización de gastos
+  - Sugerencias de inversión
+  - Planificación financiera automática
+  - Alertas proactivas
 
-[SECCIÓN TÉCNICA - YO LA COMPLETO DESPUÉS]
-## Tech Stack y Arquitectura
-(Esta sección la completo yo una vez que termines tus respuestas)
+**Estado:** ❌ 0% Completada
+
+**Estimación:** 6-8 meses de desarrollo (requiere infraestructura IA)
+
+---
+
+### 📊 Progreso General del Proyecto
+
+```
+Fase 1: ████████████████████ 100% ✅
+Fase 2: ████████████████░░░░  80% 🚧
+Fase 3: ░░░░░░░░░░░░░░░░░░░░   0% ❌
+Fase 4: ░░░░░░░░░░░░░░░░░░░░   0% ❌
+
+Total:  ██████████░░░░░░░░░░  45% 
+```
+
+**Próximo Milestone:** Completar Gestor de Servicios (Fase 2)
+
+---
+
+## 1. OBJETIVO DEL PROYECTO ✅
+
+**Objetivo Principal:**
+Crear una aplicación integral de tracking de finanzas personales que permita el posterior procesamiento de datos para que un agente de IA ayude al usuario a alcanzar sus objetivos de ahorro e inversión.
+
+**Problemas que Resuelve:**
+
+1. ✅ Tedioso control manual de gastos e ingresos
+2. ❌ Decisiones financieras impulsivas vs planificadas (pendiente: agente IA)
+
+---
+
+## 2. MVP (Versión Mínima Viable) - Estado: ✅ COMPLETADO
+
+### Funcionalidades Implementadas
+
+#### ✅ 1. Gestión de Cuentas Financieras
+
+- ✅ Crear instituciones financieras (Bancos, Billeteras Virtuales)
+- ✅ Crear productos financieros dentro de instituciones
+- ✅ Gestión de efectivo
+- ✅ Soporte multi-moneda (ARS, USD)
+- ✅ Conversión automática de monedas
+
+#### ✅ 2. Registro de Transacciones
+
+- ✅ Formulario de creación de gastos
+- ✅ Formulario de creación de ingresos
+- ✅ Categorización de transacciones
+- ✅ Soporte para cuotas en tarjetas de crédito
+- ✅ Cálculo automático de intereses
+
+#### ✅ 3. Dashboard y Visualización
+
+- ✅ Vista de todas las cuentas con saldos
+- ✅ Resúmenes mensuales de tarjetas de crédito
+- ✅ Visualización de transacciones por producto
+- ✅ Balance total en múltiples monedas
+
+#### ✅ 4. Gestión de Categorías
+
+- ✅ Crear categorías personalizadas
+- ✅ Categorías de ingresos y egresos
+- ✅ Editar y eliminar categorías
+- ✅ Categorías del sistema (no editables)
+
+#### ✅ 5. Sistema de Resúmenes
+
+- ✅ Generación automática de resúmenes mensuales
+- ✅ Visualización de transacciones por resumen
+- ✅ Proceso de pago de resúmenes
+- ✅ Comprobantes de pago
+
+---
+
+## 3. REGLAS DE NEGOCIO - Cuentas ✅
+
+### ✅ 3.1 Tipos de Cuentas Implementadas
+
+- ✅ Efectivo (CASH)
+- ✅ Bancos (instituciones con productos)
+- ✅ Billeteras Virtuales (WALLET)
+- ✅ Tarjetas de Crédito (CREDIT_CARD)
+- ✅ Préstamos (LOAN)
+- ✅ Cuentas Corrientes (CHECKING_ACCOUNT)
+- ✅ Cajas de Ahorro (SAVINGS_ACCOUNT)
+- ❌ Seguros (pendiente)
+- ❌ Inversiones (pendiente)
+
+### ✅ 3.2 Información de Cuentas
+
+- ✅ Institución financiera
+- ✅ Tipo de producto
+- ✅ Fecha de vencimiento (tarjetas)
+- ✅ Fecha de cierre (tarjetas)
+- ✅ Límites de uso
+- ✅ Saldo actual
+- ✅ Moneda (ARS, USD, CRYPTO)
+- ❌ Bonificaciones y recordatorios (pendiente)
+
+### ✅ 3.3 Múltiples Cuentas
+
+- ✅ Usuario puede tener múltiples cuentas del mismo tipo
+- ✅ Múltiples instituciones
+- ✅ Múltiples productos por institución
+
+---
+
+## 4. REGLAS DE NEGOCIO - Transacciones ✅
+
+### ✅ 4.1 Tipos de Transacciones
+
+- ✅ Ingresos (INCOME)
+- ✅ Egresos (EXPENSE)
+- ❌ Transferencias entre cuentas (pendiente)
+- ✅ Deudas (mediante tarjetas de crédito y préstamos)
+
+### ✅ 4.2 Información de Transacciones
+
+- ✅ Monto
+- ✅ Fecha
+- ✅ Descripción
+- ✅ Categoría
+- ✅ Cuenta de origen
+- ✅ Cuenta de destino (en transferencias)
+- ❌ Clasificación automática por IA (pendiente)
+
+### ✅ 4.3 Categorías
+
+- ✅ Usuario puede crear categorías personalizadas
+- ✅ Usuario puede editar/eliminar categorías
+- ✅ Categorías del sistema protegidas
+- ✅ Iconos personalizables (emojis)
+- ❌ Clasificación automática por IA (pendiente)
+
+### ✅ 4.4 Edición y Eliminación
+
+- ✅ Usuario puede modificar transacciones
+- ✅ Usuario puede eliminar transacciones
+- ✅ Control total sobre los datos
+
+---
+
+## 5. REGLAS DE NEGOCIO - Deudas ✅
+
+### ✅ 5.1 Modelo de Deudas
+
+- ✅ Entidad separada (Productos tipo CREDIT_CARD y LOAN)
+- ✅ Pagos parciales mediante resúmenes
+- ✅ Intereses explícitos (cuotas con diferente valor)
+
+### ✅ 5.2 Cuotas y Pagos
+
+- ✅ Deudas con múltiples cuotas
+- ✅ Cuotas con interés calculado
+- ✅ Pago total de resúmenes
+- ✅ Fechas de vencimiento
+- ✅ Generación automática de cuotas futuras
+- ✅ Visualización de próximo resumen
+
+---
+
+## 6. DASHBOARD ✅
+
+### ✅ Datos Implementados
+
+1. ✅ Saldo total (por moneda)
+2. ✅ Balance de todas las cuentas
+3. ✅ Últimas transacciones por producto
+4. ✅ Resúmenes de tarjetas de crédito
+5. ✅ Detalles de cada producto
+6. ❌ Gráficos de gastos por categoría (pendiente)
+7. ❌ Comparativas mes a mes (pendiente)
+
+---
+
+## 7. FUTURO (post-MVP) - Roadmap
+
+### ❌ Fase 2: Integración con IA (Pendiente)
+
+- ❌ Integración con WhatsApp
+  - ❌ Carga de transacciones por texto
+  - ❌ Carga por audio
+  - ❌ Carga por fotos de tickets
+- ❌ Agente de IA
+  - ❌ Aprendizaje del comportamiento del usuario
+  - ❌ Recomendaciones de gastos
+  - ❌ Sugerencias de promociones
+  - ❌ Consejos de inversión
+  - ❌ Alertas de vencimientos
+  - ❌ Limitación de gastos según metas
+
+### ❌ Fase 3: Metas y Planificación (Pendiente)
+
+- ❌ Definición de metas de ahorro
+- ❌ Seguimiento de progreso
+- ❌ Presupuestos por categoría
+- ❌ Alertas de sobre-gasto
+
+### ❌ Fase 4: Características Avanzadas (Pendiente)
+
+- ❌ Inversiones
+- ❌ Seguros
+- ❌ Recordatorios de bonificaciones
+- ❌ Gráficos avanzados
+- ❌ Exportación de datos
+- ❌ Reportes personalizados
+
+---
+
+## 8. TECH STACK Y ARQUITECTURA ✅
+
+### ✅ Stack Implementado
+
+**Frontend:**
+
+- ✅ Next.js 15 (App Router)
+- ✅ React 18
+- ✅ TypeScript
+- ✅ Tailwind CSS
+- ✅ Sistema de diseño OKLCH
+- ✅ 3 temas (Light, Dark, Blue-Sober)
+
+**Backend:**
+
+- ✅ Next.js Server Actions
+- ✅ Prisma ORM
+- ✅ PostgreSQL
+
+**Componentes UI:**
+
+- ✅ Button, Input, Select, Modal
+- ✅ ThemeProvider, ThemeSwitcher
+- ✅ Sistema de componentes reutilizables
+
+**Estructura:**
+
+```
+✅ app/                    # Next.js App Router
+✅ src/actions/           # Server Actions
+✅ src/components/        # Componentes React
+✅ src/types/            # TypeScript types
+✅ prisma/               # Database schema
+✅ docs/                 # Documentación
+```
+
+---
+
+## 9. RESUMEN DE ESTADO
+
+### ✅ Completado (MVP)
+
+- ✅ Gestión completa de cuentas y productos
+- ✅ Sistema de transacciones (ingresos/egresos)
+- ✅ Categorización manual
+- ✅ Resúmenes de tarjetas de crédito
+- ✅ Multi-moneda con conversión
+- ✅ Sistema de temas
+- ✅ UI moderna y responsive
+- ✅ CRUD completo de todas las entidades
+
+### ❌ Pendiente (Post-MVP)
+
+- ❌ Integración WhatsApp
+- ❌ Agente de IA
+- ❌ Clasificación automática
+- ❌ Metas de ahorro
+- ❌ Transferencias entre cuentas
+- ❌ Gráficos avanzados
+- ❌ Inversiones y seguros
+
+---
+
+## 10. PRÓXIMOS PASOS SUGERIDOS
+
+### Prioridad Alta
+
+1. ❌ Implementar transferencias entre cuentas
+2. ❌ Agregar gráficos de gastos por categoría
+3. ❌ Dashboard con métricas del mes
+
+### Prioridad Media
+
+4. ❌ Sistema de metas de ahorro
+5. ❌ Presupuestos por categoría
+6. ❌ Exportación de datos (CSV/Excel)
+
+### Prioridad Baja (Requiere IA)
+
+7. ❌ Integración con WhatsApp
+8. ❌ Clasificación automática de transacciones
+9. ❌ Agente de IA con recomendaciones
+
+---
+
+**Última actualización:** 2025-11-26  
+**Estado:** MVP Completado ✅ | Listo para Fase 2 ❌

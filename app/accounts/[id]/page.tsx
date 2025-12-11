@@ -1,5 +1,6 @@
 
 import { getProductDetails } from '@/src/actions/accounts/account-actions';
+import { CARD_PROVIDER_LOGOS, CardProvider } from '@/src/types';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import TransactionList from './TransactionList';
@@ -31,7 +32,21 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
                     <div className="flex justify-between items-start">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900 mb-1">{product.name}</h1>
+                            <h1 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                                {product.name}
+                                {product.type === 'CREDIT_CARD' && (product as any).provider && CARD_PROVIDER_LOGOS[(product as any).provider as CardProvider] && (
+                                    <img
+                                        src={CARD_PROVIDER_LOGOS[(product as any).provider as CardProvider]}
+                                        alt={(product as any).provider}
+                                        className="h-6 w-auto object-contain"
+                                    />
+                                )}
+                                {product.type === 'CREDIT_CARD' && product.lastFourDigits && (
+                                    <span className="text-gray-500 font-normal text-lg">
+                                        {product.lastFourDigits}
+                                    </span>
+                                )}
+                            </h1>
                             <p className="text-gray-500">
                                 {product.institution ? `${product.institution.name} • ` : ''}
                                 {product.currency}

@@ -3,17 +3,153 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  /* Updated primary to blue for Tuli brand */
+  --primary: oklch(0.546 0.245 262.881);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  /* Added success color */
+  --success: oklch(0.527 0.154 150.069);
+  --success-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.546 0.245 262.881);
+  --radius: 0.625rem;
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  /* Updated primary to blue for dark mode */
+  --primary: oklch(0.623 0.214 259.815);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  /* Added success color for dark mode */
+  --success: oklch(0.627 0.194 149.214);
+  --success-foreground: oklch(0.985 0 0);
+  --border: oklch(0.3 0 0);
+  --input: oklch(0.3 0 0);
+  --ring: oklch(0.623 0.214 259.815);
+}
+
+/* Added blue-sober theme - professional blue tones */
+/* Noche Serena Theme (replaces blue-sober) */
+.blue-sober {
+  --background: rgb(23, 33, 54);
+  /* fondo-base (slightly lighter) */
+  --foreground: rgb(241, 245, 249);
+  /* texto-alto */
+
+  --card: rgb(30, 41, 59);
+  /* superficie-1 */
+  --card-foreground: rgb(241, 245, 249);
+  /* texto-alto */
+
+  --popover: rgb(51, 65, 85);
+  /* superficie-2 */
+  --popover-foreground: rgb(241, 245, 249);
+  /* texto-alto */
+
+  --primary: rgb(59, 130, 246);
+  /* primario */
+  --primary-foreground: rgb(241, 245, 249);
+  /* texto-alto */
+
+  --secondary: rgb(51, 65, 85);
+  /* superficie-2 */
+  --secondary-foreground: rgb(241, 245, 249);
+  /* texto-alto */
+
+  --muted: rgb(30, 41, 59);
+  /* superficie-1 */
+  --muted-foreground: rgb(156, 163, 175);
+  /* texto-medio */
+
+  --accent: rgb(51, 65, 85);
+  /* superficie-2 (subtle hover) */
+  --accent-foreground: rgb(241, 245, 249);
+  /* texto-alto */
+
+  --destructive: rgb(239, 68, 68);
+  /* error */
+  --destructive-foreground: rgb(241, 245, 249);
+  /* texto-alto */
+
+  --success: rgb(34, 197, 94);
+  /* exito */
+  --success-foreground: rgb(241, 245, 249);
+  /* texto-alto */
+
+  --border: rgb(62, 78, 100);
+  /* borde */
+  --input: rgb(62, 78, 100);
+  /* borde */
+  --ring: rgb(59, 130, 246);
+  /* primario */
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .animate-slide-in-right {
+    animation: slideInRight 300ms ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 200ms ease-out;
+  }
+
+  .shadow-glow {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 16px rgba(59, 130, 246, 0.06);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }

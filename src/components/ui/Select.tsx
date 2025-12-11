@@ -1,57 +1,28 @@
-// src/components/ui/Select.tsx
 import React from 'react';
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
     label?: string;
     error?: string;
-    helperText?: string;
-    fullWidth?: boolean;
-    options?: Array<{ value: string; label: string }>;
+    children: React.ReactNode;
 }
 
-export default function Select({
-    label,
-    error,
-    helperText,
-    fullWidth = true,
-    options,
-    children,
-    className = '',
-    ...props
-}: SelectProps) {
-    const widthClass = fullWidth ? 'w-full' : '';
-    const errorClass = error ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500';
-
+export default function Select({ label, error, className = '', children, ...props }: SelectProps) {
     return (
-        <div className={widthClass}>
+        <div className="w-full">
             {label && (
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-2">
                     {label}
-                    {props.required && <span className="text-red-500 ml-1">*</span>}
                 </label>
             )}
-
             <select
-                className={`${widthClass} p-2 border rounded-lg focus:ring-2 focus:border-transparent disabled:opacity-50 disabled:bg-gray-100 ${errorClass} ${className}`}
+                className={`w-full p-3 border border-border bg-background text-foreground rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${error ? 'border-destructive focus:ring-destructive' : ''
+                    } ${className}`}
                 {...props}
             >
-                {options ? (
-                    options.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))
-                ) : (
-                    children
-                )}
+                {children}
             </select>
-
             {error && (
-                <p className="mt-1 text-sm text-red-600">{error}</p>
-            )}
-
-            {!error && helperText && (
-                <p className="mt-1 text-xs text-gray-500">{helperText}</p>
+                <p className="mt-1 text-sm text-destructive">{error}</p>
             )}
         </div>
     );

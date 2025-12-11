@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '@/src/actions/categories/category-actions';
 import { Category, COMMON_CATEGORY_EMOJIS } from '@/src/types';
 import { Modal, Input, Button } from '@/src/components/ui';
+import ThemeSwitcher from '../ui/ThemeSwitcher';
 
 export default function CategoriesClient() {
     const [activeTab, setActiveTab] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
@@ -104,53 +106,58 @@ export default function CategoriesClient() {
         }
     };
 
-
-
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-4xl mx-auto px-4">
+        <div className="min-h-screen bg-background">
+            <div className="max-w-4xl mx-auto px-6 py-8">
                 {/* Navigation */}
-                <div className="mb-6 flex gap-3">
-                    <a
-                        href="/"
-                        className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-2 shadow-sm border border-gray-200"
-                    >
-                        ← Inicio
-                    </a>
-                    <a
-                        href="/accounts"
-                        className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-2 shadow-sm border border-gray-200"
-                    >
-                        📊 Mis Cuentas
-                    </a>
+                <div className="mb-6 flex gap-3 justify-between items-center">
+                    <div className="flex gap-3">
+                        <Link
+                            href="/"
+                            className="bg-card hover:bg-accent text-card-foreground px-4 py-2 rounded-xl font-medium transition-colors text-sm flex items-center gap-2 shadow-sm border border-border"
+                        >
+                            ← Inicio
+                        </Link>
+                        <Link
+                            href="/accounts"
+                            className="bg-card hover:bg-accent text-card-foreground px-4 py-2 rounded-xl font-medium transition-colors text-sm flex items-center gap-2 shadow-sm border border-border"
+                        >
+                            📊 Mis Cuentas
+                        </Link>
+                    </div>
+                    <ThemeSwitcher />
                 </div>
 
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900">Gestión de Categorías</h1>
+                {/* Header */}
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 className="text-4xl font-bold text-foreground mb-2">Gestión de Categorías</h1>
+                        <p className="text-muted-foreground">Organiza tus transacciones por categoría</p>
+                    </div>
                     <button
                         onClick={() => handleOpenModal()}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-xl font-medium transition-all flex items-center gap-2 shadow-sm"
                     >
                         ➕ Nueva Categoría
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="bg-white rounded-lg shadow-sm p-1 mb-6 inline-flex">
+                <div className="bg-card border border-border rounded-xl shadow-sm p-1.5 mb-6 inline-flex">
                     <button
                         onClick={() => setActiveTab('EXPENSE')}
-                        className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'EXPENSE'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'text-gray-500 hover:text-gray-700'
+                        className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'EXPENSE'
+                                ? 'bg-destructive/10 text-destructive'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                             }`}
                     >
                         💸 Egresos
                     </button>
                     <button
                         onClick={() => setActiveTab('INCOME')}
-                        className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'INCOME'
-                            ? 'bg-green-100 text-green-700'
-                            : 'text-gray-500 hover:text-gray-700'
+                        className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'INCOME'
+                                ? 'bg-success/10 text-success'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                             }`}
                     >
                         💰 Ingresos
@@ -158,41 +165,41 @@ export default function CategoriesClient() {
                 </div>
 
                 {/* List */}
-                <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
                     {isLoading ? (
-                        <div className="p-8 text-center text-gray-500">Cargando categorías...</div>
+                        <div className="p-8 text-center text-muted-foreground">Cargando categorías...</div>
                     ) : categories.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500">
+                        <div className="p-8 text-center text-muted-foreground">
                             No hay categorías de {activeTab === 'INCOME' ? 'ingresos' : 'egresos'} creadas.
                         </div>
                     ) : (
-                        <div className="divide-y divide-gray-100">
+                        <div className="divide-y divide-border">
                             {categories.map((category) => (
-                                <div key={category.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-2xl">{category.icon || '🏷️'}</span>
+                                <div key={category.id} className="p-5 flex items-center justify-between hover:bg-accent transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-3xl">{category.icon || '🏷️'}</span>
                                         <div>
-                                            <p className="font-medium text-gray-900">{category.name}</p>
+                                            <p className="font-semibold text-foreground">{category.name}</p>
                                             {category.isSystem && (
-                                                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                                                <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full mt-1 inline-block">
                                                     Sistema
                                                 </span>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         {!category.isSystem && (
                                             <>
                                                 <button
                                                     onClick={() => handleOpenModal(category)}
-                                                    className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                                                    className="p-2 text-muted-foreground hover:text-primary transition-colors rounded-lg hover:bg-primary/10"
                                                     title="Editar"
                                                 >
                                                     ✏️
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(category.id)}
-                                                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                                    className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-lg hover:bg-destructive/10"
                                                     title="Eliminar"
                                                 >
                                                     🗑️
@@ -213,9 +220,8 @@ export default function CategoriesClient() {
                         onClose={() => setIsModalOpen(false)}
                         title={editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
                     >
-
                         {error && (
-                            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-sm">
                                 {error}
                             </div>
                         )}
@@ -230,7 +236,7 @@ export default function CategoriesClient() {
                             />
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                     Icono
                                 </label>
                                 <div className="flex gap-2 mb-2">
@@ -238,16 +244,16 @@ export default function CategoriesClient() {
                                         type="text"
                                         value={formData.icon}
                                         onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                                        className="w-16 p-3 border border-gray-300 rounded-lg text-center text-xl"
+                                        className="w-16 p-3 border border-border bg-background text-foreground rounded-xl text-center text-xl transition-all focus:ring-2 focus:ring-primary"
                                         maxLength={2}
                                     />
-                                    <div className="flex-1 flex flex-wrap gap-2 p-2 bg-gray-50 rounded-lg">
+                                    <div className="flex-1 flex flex-wrap gap-2 p-3 bg-muted rounded-xl max-h-32 overflow-y-auto">
                                         {COMMON_CATEGORY_EMOJIS.map(emoji => (
                                             <button
                                                 key={emoji}
                                                 type="button"
                                                 onClick={() => setFormData({ ...formData, icon: emoji })}
-                                                className="hover:bg-gray-200 p-1 rounded text-xl transition-colors"
+                                                className="hover:bg-background p-2 rounded-lg text-xl transition-colors hover:scale-110 transform"
                                             >
                                                 {emoji}
                                             </button>

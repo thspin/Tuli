@@ -19,6 +19,8 @@ model User {
   transactions Transaction[]
   debts        Debt[]
   summaries    CreditCardSummary[]
+  services     Service[]
+  serviceBills ServiceBill[]
 }
 
 model Category {
@@ -30,6 +32,7 @@ model Category {
   userId       String
   user         User          @relation(fields: [userId], references: [id])
   transactions Transaction[]
+  services     Service[]
 }
 
 model Transaction {
@@ -52,6 +55,8 @@ model Transaction {
   fromProduct   FinancialProduct @relation("FromProduct", fields: [fromProductId], references: [id])
   toProductId   String?
   toProduct     FinancialProduct? @relation("ToProduct", fields: [toProductId], references: [id])
+  
+  serviceBill   ServiceBill?
 }
 
 model Debt {
@@ -86,15 +91,27 @@ model FinancialProduct {
   balance            Decimal              @default(0.0)
   closingDay         Int?
   dueDay             Int?
-  limit              Decimal?
+  limit              Decimal?             // Deprecated - keeping for backward compatibility
+  limitSinglePayment Decimal?             // Límite para compras en un solo pago
+  limitInstallments  Decimal?             // Límite para compras en cuotas
   sharedLimit        Boolean              @default(false) // Si comparte límite con otras tarjetas
+  unifiedLimit       Boolean              @default(false) // Si usa el mismo límite para cuotas y 1 pago
+  lastFourDigits     String?              // Últimos 4 dígitos de la tarjeta
+  provider           CardProvider?        // Proveedor de la tarjeta (Visa, Mastercard, etc)
   institutionId      String?
   institution        FinancialInstitution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  
+  // Self-relation for Debit Cards linked to Savings Accounts
+  linkedProductId    String?
+  linkedProduct      FinancialProduct?    @relation("LinkedProduct", fields: [linkedProductId], references: [id])
+  linkedByProducts   FinancialProduct[]   @relation("LinkedProduct")
+
   userId             String
   user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactionsOrigin Transaction[]        @relation("FromProduct")
   transactionsDest   Transaction[]        @relation("ToProduct")
   summaries          CreditCardSummary[]
+  paymentRules       ServicePaymentRule[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 
@@ -131,6 +148,87 @@ model ExchangeRate {
   @@index([timestamp])
 }
 
+// --- SERVICES MODULE ---
+
+model Service {
+  id             String @id @default(uuid())
+  name           String
+  defaultAmount  Decimal?
+  defaultDueDay  Int?   // 1-31, optional for manual services
+  
+  // Renewal / Management
+  renewalDate    DateTime? // Fecha de vencimiento de la promo/descuento
+  renewalNote    String?   // Notas sobre la renovación (ej. "Llamar al 0800...")
+  
+  categoryId     String
+  category       Category @relation(fields: [categoryId], references: [id])
+  
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  
+  bills          ServiceBill[]
+  paymentRules   ServicePaymentRule[] 
+  
+  active         Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ServiceBill {
+  id          String   @id @default(uuid())
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  
+  dueDate     DateTime 
+  amount      Decimal  
+  
+  status      BillStatus @default(PENDING)
+  
+  transactionId String? @unique
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  
+  month       Int
+  year        Int
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([serviceId, year, month])
+}
+
+model ServicePaymentRule {
+  id          String   @id @default(uuid())
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  
+  productId   String
+  product     FinancialProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  benefitType ServiceBenefitType 
+  value       Decimal // Percentage (e.g., 10 for 10%) or Fixed Amount
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([serviceId, productId])
+}
+
+enum BillStatus {
+  PENDING
+  PAID
+  SKIPPED
+}
+
+enum ServiceBenefitType {
+  DISCOUNT   // Descuento inmediato en el pago
+  CASHBACK   // Reintegro posterior
+}
+
+// --- END SERVICES MODULE ---
+
 enum TransactionType {
   INCOME
   EXPENSE
@@ -162,4 +260,11 @@ enum Currency {
 enum CategoryType {
   INCOME
   EXPENSE
+}
+
+enum CardProvider {
+  VISA
+  MASTERCARD
+  AMEX
+  OTHER
 }

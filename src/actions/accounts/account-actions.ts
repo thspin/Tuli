@@ -211,18 +211,58 @@ export async function createProduct(formData: FormData) {
     // Validar campos de tarjeta de crédito y préstamos
     let closingDay = null;
     let dueDay = null;
-    let limit = null;
+    let limit = null; // Deprecated, keeping for backward compatibility
+    let limitSinglePayment = null;
+    let limitInstallments = null;
     let sharedLimit = false;
+    let unifiedLimit = false;
+    let linkedProductId = null;
+    let lastFourDigits = null;
+    let provider = null;
+
+    if (type === ProductType.CREDIT_CARD || type === ProductType.DEBIT_CARD) {
+      lastFourDigits = formData.get('lastFourDigits') as string | null;
+      if (lastFourDigits && !/^\d{4}$/.test(lastFourDigits)) {
+        throw new Error('Los últimos 4 dígitos deben ser 4 números');
+      }
+
+      if (type === ProductType.CREDIT_CARD) {
+        provider = formData.get('provider') as any;
+      }
+    }
 
     if (type === ProductType.CREDIT_CARD) {
       closingDay = formData.get('closingDay') ? parseInt(formData.get('closingDay') as string) : null;
       dueDay = formData.get('dueDay') ? parseInt(formData.get('dueDay') as string) : null;
-      limit = formData.get('limit') ? parseFloat(formData.get('limit') as string) : null;
+      limitSinglePayment = formData.get('limitSinglePayment') ? parseFloat(formData.get('limitSinglePayment') as string) : null;
+      limitInstallments = formData.get('limitInstallments') ? parseFloat(formData.get('limitInstallments') as string) : null;
       sharedLimit = formData.get('sharedLimit') === 'true';
 
-      const creditCardValidation = validateCreditCardFields(closingDay, dueDay, limit);
+      const creditCardValidation = validateCreditCardFields(closingDay, dueDay, limitSinglePayment || limitInstallments);
       if (!creditCardValidation.valid) {
         throw new Error(creditCardValidation.error);
+      }
+    }
+
+    if (type === ProductType.DEBIT_CARD) {
+      linkedProductId = formData.get('linkedProductId') as string | null;
+
+      if (!linkedProductId) {
+        throw new Error('La tarjeta de débito debe estar vinculada a una caja de ahorro');
+      }
+
+      // Validar que la cuenta vinculada exista y sea del mismo usuario e institución
+      const linkedProduct = await prisma.financialProduct.findFirst({
+        where: {
+          id: linkedProductId,
+          userId: user.id,
+          institutionId: institutionId,
+          type: ProductType.SAVINGS_ACCOUNT
+        }
+      });
+
+      if (!linkedProduct) {
+        throw new Error('La cuenta vinculada no es válida o no pertenece a la misma institución');
       }
     }
 
@@ -259,7 +299,13 @@ export async function createProduct(formData: FormData) {
         closingDay,
         dueDay,
         limit,
+        limitSinglePayment,
+        limitInstallments,
         sharedLimit,
+        unifiedLimit,
+        linkedProductId,
+        lastFourDigits,
+        provider,
         institutionId: institutionId || null,
         userId: user.id,
       },
@@ -323,18 +369,59 @@ export async function updateProduct(id: string, formData: FormData) {
     // Validar campos de tarjeta de crédito y préstamos
     let closingDay = null;
     let dueDay = null;
-    let limit = null;
+    let limit = null; // Deprecated
+    let limitSinglePayment = null;
+    let limitInstallments = null;
     let sharedLimit = false;
+    let unifiedLimit = false;
+    let linkedProductId = null;
+    let lastFourDigits = null;
+    let provider = null;
+
+    if (type === ProductType.CREDIT_CARD || type === ProductType.DEBIT_CARD) {
+      lastFourDigits = formData.get('lastFourDigits') as string | null;
+      if (lastFourDigits && !/^\d{4}$/.test(lastFourDigits)) {
+        throw new Error('Los últimos 4 dígitos deben ser 4 números');
+      }
+
+      if (type === ProductType.CREDIT_CARD) {
+        provider = formData.get('provider') as any;
+      }
+    }
 
     if (type === ProductType.CREDIT_CARD) {
       closingDay = formData.get('closingDay') ? parseInt(formData.get('closingDay') as string) : null;
       dueDay = formData.get('dueDay') ? parseInt(formData.get('dueDay') as string) : null;
-      limit = formData.get('limit') ? parseFloat(formData.get('limit') as string) : null;
+      limitSinglePayment = formData.get('limitSinglePayment') ? parseFloat(formData.get('limitSinglePayment') as string) : null;
+      limitInstallments = formData.get('limitInstallments') ? parseFloat(formData.get('limitInstallments') as string) : null;
       sharedLimit = formData.get('sharedLimit') === 'true';
+      unifiedLimit = formData.get('unifiedLimit') === 'true';
 
-      const creditCardValidation = validateCreditCardFields(closingDay, dueDay, limit);
+      const creditCardValidation = validateCreditCardFields(closingDay, dueDay, limitSinglePayment || limitInstallments);
       if (!creditCardValidation.valid) {
         throw new Error(creditCardValidation.error);
+      }
+    }
+
+    if (type === ProductType.DEBIT_CARD) {
+      linkedProductId = formData.get('linkedProductId') as string | null;
+
+      if (!linkedProductId) {
+        throw new Error('La tarjeta de débito debe estar vinculada a una caja de ahorro');
+      }
+
+      // Validar que la cuenta vinculada exista y sea del mismo usuario e institución
+      const linkedProduct = await prisma.financialProduct.findFirst({
+        where: {
+          id: linkedProductId,
+          userId: user.id,
+          institutionId: existingProduct.institutionId,
+          type: ProductType.SAVINGS_ACCOUNT
+        }
+      });
+
+      if (!linkedProduct) {
+        throw new Error('La cuenta vinculada no es válida o no pertenece a la misma institución');
       }
     }
 
@@ -373,7 +460,13 @@ export async function updateProduct(id: string, formData: FormData) {
         closingDay,
         dueDay,
         limit,
+        limitSinglePayment,
+        limitInstallments,
         sharedLimit,
+        unifiedLimit,
+        linkedProductId,
+        lastFourDigits,
+        provider,
       },
     });
 
@@ -483,6 +576,8 @@ export async function getAccountsPageData() {
           ...p,
           balance: Number(p.balance),
           limit: p.limit ? Number(p.limit) : null,
+          limitSinglePayment: p.limitSinglePayment ? Number(p.limitSinglePayment) : null,
+          limitInstallments: p.limitInstallments ? Number(p.limitInstallments) : null,
           createdAt: p.createdAt.toISOString(),
           updatedAt: p.updatedAt.toISOString(),
         })),
@@ -491,6 +586,8 @@ export async function getAccountsPageData() {
         ...p,
         balance: Number(p.balance),
         limit: p.limit ? Number(p.limit) : null,
+        limitSinglePayment: p.limitSinglePayment ? Number(p.limitSinglePayment) : null,
+        limitInstallments: p.limitInstallments ? Number(p.limitInstallments) : null,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
       })),
@@ -551,8 +648,12 @@ export async function getProductDetails(productId: string) {
         closingDay: product.closingDay,
         dueDay: product.dueDay,
         limit: product.limit ? Number(product.limit) : null,
+        limitSinglePayment: product.limitSinglePayment ? Number(product.limitSinglePayment) : null,
+        limitInstallments: product.limitInstallments ? Number(product.limitInstallments) : null,
         sharedLimit: product.sharedLimit,
         institutionId: product.institutionId,
+        lastFourDigits: product.lastFourDigits,
+        provider: (product as any).provider,
         userId: product.userId,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),

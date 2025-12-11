@@ -19,7 +19,11 @@ export {
     PRODUCT_TYPE_ICONS,
     PRODUCT_TYPE_LABELS,
     CURRENCY_LABELS,
+    CARD_PROVIDER_LABELS,
+    CARD_PROVIDER_LOGOS,
 } from './product.types';
+
+export type { CardProvider } from './product.types';
 
 // Category types
 export type {

@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "dev:clean": "lsof -ti:3000,3001,3002 | xargs kill -9 2>/dev/null || true && next dev",
+    "dev": "next dev --turbo",
+    "dev:clean": "lsof -ti:3000,3001,3002 | xargs kill -9 2>/dev/null || true && next dev --turbo",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -13,6 +13,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/adapter-pg": "^6.0.0",
     "@prisma/client": "^6.0.0",
     "@types/uuid": "^10.0.0",

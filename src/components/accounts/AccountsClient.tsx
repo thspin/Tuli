@@ -2,19 +2,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link'
 import AddInstitutionButton from './AddInstitutionButton';
 import AddProductButton from './AddProductButton';
-import AddTransactionButton from '../transactions/AddTransactionButton';
-import AddIncomeButton from './AddIncomeButton';
+import ThemeSwitcher from '../ui/ThemeSwitcher';
+import InstitutionCarousel from './InstitutionCarousel';
+import ProductCard from './ProductCard';
+import ProductDetailsPanel from './ProductDetailsPanel';
 
-import { getCurrencySymbol, formatNumber } from '@/src/utils/validations';
+import { formatNumber } from '@/src/utils/validations';
 import {
     Product,
     InstitutionWithProducts,
     DisplayCurrency,
     Currency,
-    PRODUCT_TYPE_ICONS,
-    PRODUCT_TYPE_LABELS
 } from '@/src/types';
 
 interface AccountsClientProps {
@@ -31,6 +32,10 @@ const formatCurrency = (amount: number, currency: DisplayCurrency) => {
 
 export default function AccountsClient({ institutions, cashProducts, usdToArsRate }: AccountsClientProps) {
     const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>('ARS');
+    const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(
+        institutions.length > 0 ? institutions[0].id : null
+    );
+    const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
     const router = useRouter();
 
@@ -49,182 +54,177 @@ export default function AccountsClient({ institutions, cashProducts, usdToArsRat
         }
     };
 
-    const calculateInstitutionBalance = (products: Product[]): number => {
-        return products.reduce((sum, product) => {
-            const converted = convertAmount(product.balance, product.currency);
-            return sum + converted;
-        }, 0);
+    const selectedInstitution = institutions.find(inst => inst.id === selectedInstitutionId);
+    const selectedProduct = selectedInstitution?.products.find(p => p.id === selectedProductId) ||
+        cashProducts.find(p => p.id === selectedProductId);
+
+    const handleProductClick = (productId: string) => {
+        setSelectedProductId(productId);
+    };
+
+    const handleClosePanel = () => {
+        setSelectedProductId(null);
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-            <div className="max-w-6xl mx-auto p-6">
-                {/* Header */}
-                <div className="mb-6 flex justify-between items-center">
-                    <h1 className="text-3xl font-bold text-gray-800">Mis Cuentas</h1>
-                    <div className="flex gap-4 items-center">
+        <div className="min-h-screen bg-background">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                {/* Header fijo */}
+                <div className="mb-6">
+                    {/* Navigation */}
+                    <div className="mb-6 flex gap-3 justify-between items-center">
+                        <Link
+                            href="/"
+                            className="bg-card hover:bg-accent text-card-foreground px-4 py-2 rounded-xl font-medium transition-colors text-sm flex items-center gap-2 shadow-sm border border-border"
+                        >
+                            ← Inicio
+                        </Link>
+                        <ThemeSwitcher />
+                    </div>
+
+                    {/* Título y subtítulo */}
+                    <div className="mb-6">
+                        <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">Mis Cuentas</h1>
+                        <p className="text-muted-foreground text-sm md:text-base">Gestiona tus productos financieros</p>
+                    </div>
+
+                    {/* Toolbar */}
+                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                         {/* Currency Toggle */}
                         {usdToArsRate && (
-                            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
-                                <span className="text-sm text-gray-600">Ver en:</span>
-                                <button
-                                    onClick={() => setDisplayCurrency(displayCurrency === 'ARS' ? 'USD' : 'ARS')}
-                                    className={`px-3 py-1 rounded text-sm font-medium transition ${displayCurrency === 'ARS'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                        }`}
-                                >
-                                    ARS
-                                </button>
-                                <button
-                                    onClick={() => setDisplayCurrency(displayCurrency === 'USD' ? 'ARS' : 'USD')}
-                                    className={`px-3 py-1 rounded text-sm font-medium transition ${displayCurrency === 'USD'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                        }`}
-                                >
-                                    USD
-                                </button>
-                                <span className="text-xs text-gray-500 ml-2">
+                            <div className="flex items-center gap-2 bg-card px-4 py-2.5 rounded-xl shadow-sm border border-border">
+                                <span className="text-sm text-muted-foreground font-medium">Ver en:</span>
+                                <div className="flex gap-1 bg-muted p-1 rounded-lg">
+                                    <button
+                                        onClick={() => setDisplayCurrency('ARS')}
+                                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${displayCurrency === 'ARS'
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                            }`}
+                                    >
+                                        ARS
+                                    </button>
+                                    <button
+                                        onClick={() => setDisplayCurrency('USD')}
+                                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${displayCurrency === 'USD'
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                            }`}
+                                    >
+                                        USD
+                                    </button>
+                                </div>
+                                <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">
                                     1 USD = ${formatNumber(usdToArsRate, 2)}
                                 </span>
                             </div>
                         )}
 
-                        <AddTransactionButton institutions={institutions} cashProducts={cashProducts} />
-                        <AddIncomeButton institutions={institutions} cashProducts={cashProducts} />
-                        <AddInstitutionButton />
-                        <AddProductButton institutions={institutions} />
-                    </div >
-                </div >
+                        {/* Action buttons */}
+                        <div className="flex gap-3 flex-wrap">
+                            <AddInstitutionButton />
+                            <AddProductButton institutions={institutions} />
+                        </div>
+                    </div>
+                </div>
 
-                {/* Efectivo */}
-                {
-                    cashProducts.length > 0 && (
-                        <div className="mb-8">
-                            <div className="flex justify-between items-start mb-4">
-                                <h2 className="text-xl font-semibold text-gray-700">💵 Efectivo</h2>
+                {/* Carrusel de Instituciones */}
+                {institutions.length > 0 && (
+                    <InstitutionCarousel
+                        institutions={institutions}
+                        selectedInstitutionId={selectedInstitutionId}
+                        onSelectInstitution={setSelectedInstitutionId}
+                    />
+                )}
+
+                {/* Área de Productos */}
+                <div className="mb-8">
+                    {/* Efectivo - siempre visible si hay */}
+                    {cashProducts.length > 0 && (
+                        <div className="mb-12">
+                            <div className="flex items-center gap-2 mb-6">
+                                <h2 className="text-xl md:text-2xl font-semibold text-foreground">💵 Efectivo</h2>
+                                <span className="text-sm text-muted-foreground">({cashProducts.length})</span>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {cashProducts.map((product) => (
-                                    <div
+                                    <ProductCard
                                         key={product.id}
+                                        product={product}
+                                        institutionName="Efectivo"
                                         onClick={() => router.push(`/accounts/${product.id}`)}
-                                        className="bg-white rounded-lg p-4 shadow hover:shadow-md transition cursor-pointer"
-                                    >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h3 className="font-semibold text-gray-800">{product.name}</h3>
-                                            <div className="flex items-center gap-2">
-                                                <div onClick={(e) => e.stopPropagation()}>
-                                                    <AddProductButton mode="edit" product={product} institutions={institutions} />
-                                                </div>
-                                                <span className="text-2xl">{PRODUCT_TYPE_ICONS[product.type]}</span>
-                                            </div>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mb-2">{getCurrencySymbol(product.currency)}</div>
-                                        <div className="text-2xl font-bold text-green-600">
-                                            {formatCurrency(convertAmount(product.balance, product.currency), displayCurrency)}
-                                        </div>
-                                        <div className="text-xs text-gray-400 mt-1">
-                                            Original: {getCurrencySymbol(product.currency)} {formatNumber(product.balance, 2)}
-                                        </div>
-                                    </div>
+                                        isSelected={selectedProductId === product.id}
+                                    />
                                 ))}
                             </div>
                         </div>
-                    )
-                }
+                    )}
 
-                {/* Instituciones */}
-                {
-                    institutions.map((institution) => (
-                        <div key={institution.id} className="mb-8">
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <div className="mb-4 flex justify-between items-start">
-                                    <div>
-                                        <h2 className="text-xl font-bold text-gray-800">
-                                            {institution.type === 'BANK' ? '🏦' : '📱'} {institution.name}
-                                        </h2>
-                                        <p className="text-sm text-gray-500">
-                                            Balance total: {formatCurrency(calculateInstitutionBalance(institution.products), displayCurrency)}
-                                        </p>
-                                    </div>
-                                    <AddInstitutionButton mode="edit" institution={institution} />
+                    {/* Productos de la institución seleccionada */}
+                    {selectedInstitution && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-6">
+                                <h2 className="text-xl md:text-2xl font-semibold text-foreground">
+                                    {selectedInstitution.type === 'BANK' ? '🏦' : '📱'} {selectedInstitution.name}
+                                </h2>
+                                <span className="text-sm text-muted-foreground">
+                                    ({selectedInstitution.products.length} {selectedInstitution.products.length === 1 ? 'producto' : 'productos'})
+                                </span>
+                            </div>
+
+                            {selectedInstitution.products.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {selectedInstitution.products.map((product) => (
+                                        <ProductCard
+                                            key={product.id}
+                                            product={product}
+                                            institutionName={selectedInstitution.name}
+                                            onClick={() => handleProductClick(product.id)}
+                                            isSelected={selectedProductId === product.id}
+                                        />
+                                    ))}
                                 </div>
-
-                                {institution.products.length > 0 ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {institution.products.map((product) => (
-                                            <div
-                                                key={product.id}
-                                                onClick={() => router.push(`/accounts/${product.id}`)}
-                                                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition cursor-pointer"
-                                            >
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <div>
-                                                        <h4 className="font-semibold text-gray-700">{product.name}</h4>
-                                                        <span className="text-xs text-gray-500">{PRODUCT_TYPE_LABELS[product.type]}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <div onClick={(e) => e.stopPropagation()}>
-                                                            <AddProductButton mode="edit" product={product} institutions={institutions} />
-                                                        </div>
-                                                        <span className="text-xl">{PRODUCT_TYPE_ICONS[product.type]}</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="mt-3">
-                                                    <p className="text-xs text-gray-500 mb-1">Saldo</p>
-                                                    <p
-                                                        className={`text-xl font-bold ${product.balance < 0 ? 'text-red-600' : 'text-green-600'
-                                                            }`}
-                                                    >
-                                                        {formatCurrency(convertAmount(product.balance, product.currency), displayCurrency)}
-                                                    </p>
-                                                    <div className="text-xs text-gray-400 mt-1">
-                                                        {getCurrencySymbol(product.currency)} {formatNumber(product.balance, 2)}
-                                                    </div>
-                                                </div>
-
-                                                {product.type === 'CREDIT_CARD' && (
-                                                    <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500 flex justify-between">
-                                                        <span>Cierre: {product.closingDay}</span>
-                                                        <span>Vence: {product.dueDay}</span>
-                                                    </div>
-                                                )}
-
-                                                {product.type === 'LOAN' && product.limit && (
-                                                    <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
-                                                        <span>Límite disponible: {getCurrencySymbol(product.currency)} {formatNumber(product.limit, 2)}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-20 bg-card border-2 border-dashed border-border rounded-2xl">
+                                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                                        <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                        </svg>
                                     </div>
-                                ) : (
-                                    <p className="text-gray-400 text-center py-8">
-                                        No hay productos en esta institución
-                                    </p>
-                                )}
+                                    <p className="text-muted-foreground text-lg mb-4">No hay productos en esta institución</p>
+                                    <AddProductButton institutions={institutions} />
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Estado vacío total */}
+                    {institutions.length === 0 && cashProducts.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-20 bg-card border-2 border-dashed border-border rounded-2xl">
+                            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                                <svg className="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-foreground text-xl font-semibold mb-2">No tienes cuentas registradas</h3>
+                            <p className="text-muted-foreground mb-6">Comienza agregando una institución o efectivo</p>
+                            <div className="flex gap-3">
+                                <AddInstitutionButton />
+                                <AddProductButton institutions={institutions} />
                             </div>
                         </div>
-                    ))
-                }
+                    )}
+                </div>
+            </div>
 
-                {/* Estado vacío */}
-                {
-                    institutions.length === 0 && cashProducts.length === 0 && (
-                        <div className="text-center py-20">
-                            <p className="text-gray-500 text-lg mb-4">
-                                No tienes cuentas registradas
-                            </p>
-                            <p className="text-gray-400">
-                                Comienza agregando una institución o efectivo
-                            </p>
-                        </div>
-                    )
-                }
-            </div >
-        </div >
+            {/* Panel de Detalles */}
+            {selectedProductId && selectedProduct && (
+                <ProductDetailsPanel
+                    product={selectedProduct}
+                    institutionName={selectedInstitution?.name || 'Efectivo'}
+                    onClose={handleClosePanel}
+                />
+            )}
+        </div>
     );
 }

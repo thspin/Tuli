@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { createInstitution, updateInstitution, deleteInstitution } from '@/src/actions/accounts/account-actions';
 import { Institution } from '@/src/types';
-import { Modal } from '@/src/components/ui';
+import { Modal, Button } from '@/src/components/ui';
 
 interface AddInstitutionButtonProps {
   mode?: 'create' | 'edit';
@@ -69,12 +69,9 @@ export default function AddInstitutionButton({ mode = 'create', institution }: A
   return (
     <>
       {mode === 'create' ? (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-        >
+        <Button onClick={() => setIsOpen(true)} variant="primary">
           + Nueva Institución
-        </button>
+        </Button>
       ) : (
         <button
           onClick={() => setIsOpen(true)}

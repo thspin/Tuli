@@ -261,8 +261,8 @@ export async function getProductSummaries(productId: string) {
                 totalAmount: { gt: 0 } // Solo resúmenes con monto mayor a 0
             },
             orderBy: [
-                { year: 'desc' },
-                { month: 'desc' },
+                { year: 'asc' },
+                { month: 'asc' },
             ],
             include: {
                 product: {
@@ -333,15 +333,36 @@ export async function getSummaryDetail(productId: string, year: number, month: n
                     lte: closingDate,
                 },
             },
+            include: {
+                category: true, // Include category info
+            },
             orderBy: {
                 date: 'asc',
             },
         });
 
+        // Identificar transacciones sin categoría
+        const uncategorizedTransactions = transactions.filter(t => !t.categoryId);
+
+        // Calcular monto total de transacciones
+        const transactionsTotal = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+
+        // Calcular "saldo sin explicar" - es la diferencia entre el total del resumen y las transacciones
+        // Si el resumen dice $100 pero solo hay $80 en transacciones, hay $20 "sin explicar"
+        const summaryTotal = summary ? Number(summary.totalAmount) : 0;
+        const unexplainedBalance = summaryTotal - transactionsTotal;
+
         // Convertir Decimals a numbers
         const transactionsWithNumbers = transactions.map(t => ({
             ...t,
             amount: Number(t.amount),
+        }));
+
+        const uncategorizedWithNumbers = uncategorizedTransactions.map(t => ({
+            id: t.id,
+            description: t.description,
+            amount: Number(t.amount),
+            date: t.date,
         }));
 
         return {
@@ -359,6 +380,10 @@ export async function getSummaryDetail(productId: string, year: number, month: n
             periodStart: prevClosingDate,
             periodEnd: closingDate,
             dueDate,
+            // New fields for categorization
+            uncategorizedTransactions: uncategorizedWithNumbers,
+            unexplainedBalance: Math.abs(unexplainedBalance) > 0.01 ? unexplainedBalance : 0, // Ignorar diferencias menores a un centavo
+            requiresCategorization: uncategorizedTransactions.length > 0 || Math.abs(unexplainedBalance) > 0.01,
         };
     } catch (error) {
         console.error('Error fetching summary detail:', error);
