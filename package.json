@@ -4,25 +4,36 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --turbo",
-    "dev:clean": "lsof -ti:3000,3001,3002 | xargs kill -9 2>/dev/null || true && next dev --turbo",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "stop": "lsof -ti:3000,3001,3002 | xargs kill -9 2>/dev/null || echo 'No hay servidores corriendo'",
     "prisma:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:create": "prisma migrate dev --create-only",
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:status": "prisma migrate status",
+    "migrate:reset": "prisma migrate reset",
+    "danger:db:clean": "tsx scripts/clean-database.ts"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
+    "@clerk/localizations": "^3.35.0",
+    "@clerk/nextjs": "^6.36.8",
     "@prisma/adapter-pg": "^6.0.0",
-    "@prisma/client": "^6.0.0",
+    "@prisma/client": "^6.19.1",
     "@types/uuid": "^10.0.0",
-    "next": "^15.0.0",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.23.26",
+    "next": "^16.1.1",
+    "pdf-parse": "^1.1.4",
+    "pdfjs-dist": "^5.4.530",
     "pg": "^8.16.3",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "recharts": "^3.6.0",
     "uuid": "^13.0.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -31,9 +42,12 @@
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
     "dotenv": "^17.2.3",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^16.0.10",
     "postcss": "^8.4.49",
     "prisma": "^6.0.0",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.21.0",
     "typescript": "^5.0.0"
   }
 }

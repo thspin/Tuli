@@ -28,11 +28,14 @@ export default function EditInstitutionModal({
     // Form state
     const [name, setName] = useState(institution.name);
     const [type, setType] = useState(institution.type);
+    const [shareSummary, setShareSummary] = useState(institution.shareSummary || false);
 
     // Reset form when institution changes
     useEffect(() => {
         setName(institution.name);
+        setName(institution.name);
         setType(institution.type);
+        setShareSummary(institution.shareSummary || false);
         setShowDeleteConfirm(false);
         setError(null);
     }, [institution]);
@@ -45,6 +48,7 @@ export default function EditInstitutionModal({
         const formData = new FormData();
         formData.set('name', name);
         formData.set('type', type);
+        formData.set('shareSummary', String(shareSummary));
 
         try {
             const result = await updateInstitution(institution.id, formData);
@@ -87,7 +91,7 @@ export default function EditInstitutionModal({
     const hasProducts = institution.products.length > 0;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Editar Institución" size="md">
+        <Modal isOpen={isOpen} onClose={onClose} title="Editar Institución" size="sm">
             {error && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg text-sm">
                     {error}
@@ -161,6 +165,27 @@ export default function EditInstitutionModal({
                         <option value="BANK">🏦 Banco</option>
                         <option value="WALLET">📱 Billetera Virtual</option>
                     </Select>
+
+                    {/* Share Summary Switch */}
+                    {type === 'BANK' && (
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
+                            <div>
+                                <h4 className="text-sm font-semibold text-slate-900">Resumen Unificado</h4>
+                                <p className="text-xs text-slate-500">
+                                    Todas las tarjetas comparten el mismo resumen
+                                </p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={shareSummary}
+                                    onChange={(e) => setShareSummary(e.target.checked)}
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    )}
 
                     <div className="flex gap-3 pt-4">
                         <button

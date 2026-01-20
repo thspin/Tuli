@@ -1,8 +1,12 @@
 'use server'
 
-import { prisma } from "@/src/lib/db/prisma";
+import { prisma } from "@/src/lib/prisma";
+import { requireUser } from "@/src/lib/auth";
 import { revalidatePath } from "next/cache";
-import { InstitutionType, ProductType, Currency } from "@prisma/client";
+import { InstitutionType, ProductType, Currency, TransactionType } from "@prisma/client";
+import { z } from 'zod';
+import { getLatestExchangeRate } from "@/src/utils/exchangeRate";
+import { serializeFinancialProduct, serializeTransaction } from "@/src/utils/serializers";
 import {
   validateBalance,
   validateCreditCardFields,
@@ -13,27 +17,33 @@ import {
   requiresInstitution,
 } from "@/src/utils/validations";
 
-/**
- * Obtiene o crea el usuario demo
- * TODO: Reemplazar con autenticación real
- */
-async function getDemoUser() {
-  const userEmail = 'demo@financetracker.com';
-  let user = await prisma.user.findUnique({
-    where: { email: userEmail }
-  });
+// --- Zod Schemas ---
 
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        email: userEmail,
-        name: 'Usuario Demo',
-      }
-    });
-  }
+const institutionSchema = z.object({
+  name: z.string().min(1, "El nombre es requerido"),
+  type: z.nativeEnum(InstitutionType),
+  shareSummary: z.preprocess(val => val === 'true' || val === true, z.boolean()).optional(),
+});
 
-  return user;
-}
+const productSchema = z.object({
+  name: z.string().min(1, "El nombre es requerido"),
+  type: z.nativeEnum(ProductType),
+  currency: z.nativeEnum(Currency),
+  balance: z.coerce.number().default(0),
+  institutionId: z.string().optional().nullable(),
+  // Optional specific fields
+  closingDay: z.coerce.number().optional().nullable(),
+  dueDay: z.coerce.number().optional().nullable(),
+  limit: z.coerce.number().optional().nullable(), // Deprecated but kept
+  limitSinglePayment: z.coerce.number().optional().nullable(),
+  limitInstallments: z.coerce.number().optional().nullable(),
+  sharedLimit: z.preprocess(val => val === 'true' || val === true, z.boolean()).optional(),
+  unifiedLimit: z.preprocess(val => val === 'true' || val === true, z.boolean()).optional(),
+  linkedProductId: z.string().optional().nullable(),
+  lastFourDigits: z.string().optional().nullable(),
+  provider: z.string().optional().nullable(),
+  expirationDate: z.string().optional().nullable(),
+});
 
 // ============================================================================
 // CRUD DE INSTITUCIONES FINANCIERAS
@@ -41,14 +51,11 @@ async function getDemoUser() {
 
 export async function createInstitution(formData: FormData) {
   try {
-    const name = formData.get('name') as string;
-    const type = formData.get('type') as InstitutionType;
+    const rawData = Object.fromEntries(formData.entries());
+    const validated = institutionSchema.parse(rawData);
+    const { name, type, shareSummary } = validated;
 
-    if (!name || !type) {
-      throw new Error('Nombre y tipo son requeridos');
-    }
-
-    const user = await getDemoUser();
+    const user = await requireUser();
 
     // Verificar que no exista una institución con el mismo nombre
     const existing = await prisma.financialInstitution.findFirst({
@@ -66,14 +73,17 @@ export async function createInstitution(formData: FormData) {
       data: {
         name,
         type,
+        shareSummary: shareSummary || name.toLowerCase().includes('naranja'),
         userId: user.id,
       },
     });
 
     revalidatePath('/accounts');
-
     return { success: true };
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.issues[0].message };
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido'
@@ -83,14 +93,11 @@ export async function createInstitution(formData: FormData) {
 
 export async function updateInstitution(id: string, formData: FormData) {
   try {
-    const name = formData.get('name') as string;
-    const type = formData.get('type') as InstitutionType;
+    const rawData = Object.fromEntries(formData.entries());
+    const validated = institutionSchema.parse(rawData);
+    const { name, type, shareSummary } = validated;
 
-    if (!name || !type) {
-      throw new Error('Nombre y tipo son requeridos');
-    }
-
-    const user = await getDemoUser();
+    const user = await requireUser();
 
     // Verificar que no exista otra institución con el mismo nombre
     const existing = await prisma.financialInstitution.findFirst({
@@ -107,13 +114,15 @@ export async function updateInstitution(id: string, formData: FormData) {
 
     await prisma.financialInstitution.update({
       where: { id },
-      data: { name, type },
+      data: { name, type, shareSummary: shareSummary || name.toLowerCase().includes('naranja') },
     });
 
     revalidatePath('/accounts');
-
     return { success: true };
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.issues[0].message };
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido'
@@ -137,7 +146,6 @@ export async function deleteInstitution(id: string) {
     });
 
     revalidatePath('/accounts');
-
     return { success: true };
   } catch (error) {
     return {
@@ -153,17 +161,21 @@ export async function deleteInstitution(id: string) {
 
 export async function createProduct(formData: FormData) {
   try {
-    const name = formData.get('name') as string;
-    const type = formData.get('type') as ProductType;
-    const currency = formData.get('currency') as Currency;
-    const balance = parseFloat(formData.get('balance') as string) || 0;
-    const institutionId = formData.get('institutionId') as string | null;
+    const rawData = Object.fromEntries(formData.entries());
+    // Ajustar campos vacíos a null/undefined si es necesario antes del parseo
+    // Zod coerce ya maneja strings vacíos a 0 para numeros, pero para optionals strings?
+    const validated = productSchema.parse(rawData);
 
-    if (!name || !type || !currency) {
-      throw new Error('Nombre, tipo y moneda son requeridos');
-    }
+    // Extraer variables validadas
+    const {
+      name, type, currency, balance, institutionId,
+      closingDay, dueDay, limit, limitSinglePayment, limitInstallments,
+      sharedLimit, unifiedLimit, linkedProductId, lastFourDigits, provider, expirationDate
+    } = validated;
 
-    const user = await getDemoUser();
+    const user = await requireUser();
+
+    // --- Complex Business Logic Validations (kept from original) ---
 
     // Validar que CASH no tenga institución
     if (type === ProductType.CASH && institutionId) {
@@ -208,45 +220,21 @@ export async function createProduct(formData: FormData) {
       throw new Error(balanceValidation.error);
     }
 
-    // Validar campos de tarjeta de crédito y préstamos
-    let closingDay = null;
-    let dueDay = null;
-    let limit = null; // Deprecated, keeping for backward compatibility
-    let limitSinglePayment = null;
-    let limitInstallments = null;
-    let sharedLimit = false;
-    let unifiedLimit = false;
-    let linkedProductId = null;
-    let lastFourDigits = null;
-    let provider = null;
-
+    // Validar campos de tarjeta de crédito
     if (type === ProductType.CREDIT_CARD || type === ProductType.DEBIT_CARD) {
-      lastFourDigits = formData.get('lastFourDigits') as string | null;
       if (lastFourDigits && !/^\d{4}$/.test(lastFourDigits)) {
         throw new Error('Los últimos 4 dígitos deben ser 4 números');
-      }
-
-      if (type === ProductType.CREDIT_CARD) {
-        provider = formData.get('provider') as any;
       }
     }
 
     if (type === ProductType.CREDIT_CARD) {
-      closingDay = formData.get('closingDay') ? parseInt(formData.get('closingDay') as string) : null;
-      dueDay = formData.get('dueDay') ? parseInt(formData.get('dueDay') as string) : null;
-      limitSinglePayment = formData.get('limitSinglePayment') ? parseFloat(formData.get('limitSinglePayment') as string) : null;
-      limitInstallments = formData.get('limitInstallments') ? parseFloat(formData.get('limitInstallments') as string) : null;
-      sharedLimit = formData.get('sharedLimit') === 'true';
-
-      const creditCardValidation = validateCreditCardFields(closingDay, dueDay, limitSinglePayment || limitInstallments);
+      const creditCardValidation = validateCreditCardFields(closingDay || null, dueDay || null, limitSinglePayment || limitInstallments || null);
       if (!creditCardValidation.valid) {
         throw new Error(creditCardValidation.error);
       }
     }
 
     if (type === ProductType.DEBIT_CARD) {
-      linkedProductId = formData.get('linkedProductId') as string | null;
-
       if (!linkedProductId) {
         throw new Error('La tarjeta de débito debe estar vinculada a una caja de ahorro');
       }
@@ -267,9 +255,7 @@ export async function createProduct(formData: FormData) {
     }
 
     if (type === ProductType.LOAN) {
-      limit = formData.get('limit') ? parseFloat(formData.get('limit') as string) : null;
-
-      const loanValidation = validateLoanFields(limit);
+      const loanValidation = validateLoanFields(limit || null);
       if (!loanValidation.valid) {
         throw new Error(loanValidation.error);
       }
@@ -289,32 +275,53 @@ export async function createProduct(formData: FormData) {
       throw new Error(`Ya existe un producto con el nombre "${name}" y moneda "${currency}" en esta institución`);
     }
 
-    // Crear producto
-    await prisma.financialProduct.create({
-      data: {
-        name,
-        type,
-        currency,
-        balance,
-        closingDay,
-        dueDay,
-        limit,
-        limitSinglePayment,
-        limitInstallments,
-        sharedLimit,
-        unifiedLimit,
-        linkedProductId,
-        lastFourDigits,
-        provider,
-        institutionId: institutionId || null,
-        userId: user.id,
-      },
+    // Crear producto y transacción inicial si hay saldo
+    await prisma.$transaction(async (tx) => {
+      const product = await tx.financialProduct.create({
+        data: {
+          name,
+          type,
+          currency,
+          balance,
+          closingDay: closingDay || null,
+          dueDay: dueDay || null,
+          limit: limit || null,
+          limitSinglePayment: limitSinglePayment || null,
+          limitInstallments: limitInstallments || null,
+          sharedLimit: sharedLimit || false,
+          unifiedLimit: unifiedLimit || false,
+          linkedProductId: linkedProductId || null,
+          lastFourDigits: lastFourDigits || null,
+          provider: provider as any,
+          expirationDate: expirationDate ? new Date(`${expirationDate}T12:00:00`) : null,
+          institutionId: institutionId || null,
+          userId: user.id,
+        },
+      });
+
+      if (Number(balance) !== 0) {
+        await tx.transaction.create({
+          data: {
+            amount: Math.abs(Number(balance)),
+            date: new Date(),
+            description: 'Saldo inicial',
+            type: Number(balance) > 0 ? TransactionType.INCOME : TransactionType.EXPENSE,
+            fromProductId: product.id,
+            userId: user.id,
+            status: 'COMPLETED'
+          }
+        });
+      }
     });
 
     revalidatePath('/accounts');
+    revalidatePath('/transactions');
 
     return { success: true };
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.issues[0].message };
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido'
@@ -324,16 +331,16 @@ export async function createProduct(formData: FormData) {
 
 export async function updateProduct(id: string, formData: FormData) {
   try {
-    const name = formData.get('name') as string;
-    const type = formData.get('type') as ProductType;
-    const currency = formData.get('currency') as Currency;
-    const balance = parseFloat(formData.get('balance') as string) || 0;
+    const rawData = Object.fromEntries(formData.entries());
+    const validated = productSchema.parse(rawData);
 
-    if (!name || !type || !currency) {
-      throw new Error('Nombre, tipo y moneda son requeridos');
-    }
+    const {
+      name, type, currency, balance,
+      closingDay, dueDay, limit, limitSinglePayment, limitInstallments,
+      sharedLimit, unifiedLimit, linkedProductId, lastFourDigits, provider, expirationDate
+    } = validated;
 
-    const user = await getDemoUser();
+    const user = await requireUser();
 
     // Obtener producto existente
     const existingProduct = await prisma.financialProduct.findUnique({
@@ -366,46 +373,20 @@ export async function updateProduct(id: string, formData: FormData) {
       throw new Error(balanceValidation.error);
     }
 
-    // Validar campos de tarjeta de crédito y préstamos
-    let closingDay = null;
-    let dueDay = null;
-    let limit = null; // Deprecated
-    let limitSinglePayment = null;
-    let limitInstallments = null;
-    let sharedLimit = false;
-    let unifiedLimit = false;
-    let linkedProductId = null;
-    let lastFourDigits = null;
-    let provider = null;
-
     if (type === ProductType.CREDIT_CARD || type === ProductType.DEBIT_CARD) {
-      lastFourDigits = formData.get('lastFourDigits') as string | null;
       if (lastFourDigits && !/^\d{4}$/.test(lastFourDigits)) {
         throw new Error('Los últimos 4 dígitos deben ser 4 números');
-      }
-
-      if (type === ProductType.CREDIT_CARD) {
-        provider = formData.get('provider') as any;
       }
     }
 
     if (type === ProductType.CREDIT_CARD) {
-      closingDay = formData.get('closingDay') ? parseInt(formData.get('closingDay') as string) : null;
-      dueDay = formData.get('dueDay') ? parseInt(formData.get('dueDay') as string) : null;
-      limitSinglePayment = formData.get('limitSinglePayment') ? parseFloat(formData.get('limitSinglePayment') as string) : null;
-      limitInstallments = formData.get('limitInstallments') ? parseFloat(formData.get('limitInstallments') as string) : null;
-      sharedLimit = formData.get('sharedLimit') === 'true';
-      unifiedLimit = formData.get('unifiedLimit') === 'true';
-
-      const creditCardValidation = validateCreditCardFields(closingDay, dueDay, limitSinglePayment || limitInstallments);
+      const creditCardValidation = validateCreditCardFields(closingDay || null, dueDay || null, limitSinglePayment || limitInstallments || null);
       if (!creditCardValidation.valid) {
         throw new Error(creditCardValidation.error);
       }
     }
 
     if (type === ProductType.DEBIT_CARD) {
-      linkedProductId = formData.get('linkedProductId') as string | null;
-
       if (!linkedProductId) {
         throw new Error('La tarjeta de débito debe estar vinculada a una caja de ahorro');
       }
@@ -415,6 +396,7 @@ export async function updateProduct(id: string, formData: FormData) {
         where: {
           id: linkedProductId,
           userId: user.id,
+          // Use existing institution ID
           institutionId: existingProduct.institutionId,
           type: ProductType.SAVINGS_ACCOUNT
         }
@@ -426,9 +408,7 @@ export async function updateProduct(id: string, formData: FormData) {
     }
 
     if (type === ProductType.LOAN) {
-      limit = formData.get('limit') ? parseFloat(formData.get('limit') as string) : null;
-
-      const loanValidation = validateLoanFields(limit);
+      const loanValidation = validateLoanFields(limit || null);
       if (!loanValidation.valid) {
         throw new Error(loanValidation.error);
       }
@@ -449,31 +429,58 @@ export async function updateProduct(id: string, formData: FormData) {
       throw new Error(`Ya existe un producto con el nombre "${name}" y moneda "${currency}" en esta institución`);
     }
 
-    // Actualizar producto
-    await prisma.financialProduct.update({
-      where: { id },
-      data: {
-        name,
-        type,
-        currency,
-        balance,
-        closingDay,
-        dueDay,
-        limit,
-        limitSinglePayment,
-        limitInstallments,
-        sharedLimit,
-        unifiedLimit,
-        linkedProductId,
-        lastFourDigits,
-        provider,
-      },
+    // Calcular diferencia para el ajuste
+    const oldBalance = Number(existingProduct.balance);
+    const newBalance = Number(balance);
+    const diff = newBalance - oldBalance;
+
+    // Actualizar producto y crear transacción de ajuste si es necesario
+    await prisma.$transaction(async (tx) => {
+      await tx.financialProduct.update({
+        where: { id },
+        data: {
+          name,
+          type,
+          currency,
+          balance,
+          closingDay: closingDay || null,
+          dueDay: dueDay || null,
+          limit: limit || null,
+          limitSinglePayment: limitSinglePayment || null,
+          limitInstallments: limitInstallments || null,
+          sharedLimit: sharedLimit || false,
+          unifiedLimit: unifiedLimit || false,
+          linkedProductId: linkedProductId || null,
+          lastFourDigits: lastFourDigits || null,
+          provider: provider as any,
+          expirationDate: expirationDate ? new Date(`${expirationDate}T12:00:00`) : null,
+        },
+      });
+
+      if (diff !== 0) {
+        await tx.transaction.create({
+          data: {
+            amount: Math.abs(diff),
+            date: new Date(),
+            description: 'Ajuste de saldo manual',
+            type: diff > 0 ? TransactionType.INCOME : TransactionType.EXPENSE,
+            fromProductId: id,
+            userId: user.id,
+            status: 'COMPLETED'
+          }
+        });
+      }
     });
 
     revalidatePath('/accounts');
+    revalidatePath('/transactions');
+    revalidatePath('/calendar');
 
     return { success: true };
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.issues[0].message };
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido'
@@ -483,7 +490,7 @@ export async function updateProduct(id: string, formData: FormData) {
 
 export async function deleteProduct(id: string) {
   try {
-    const user = await getDemoUser();
+    const user = await requireUser();
 
     // Verificar que el producto pertenece al usuario
     const product = await prisma.financialProduct.findUnique({
@@ -498,26 +505,26 @@ export async function deleteProduct(id: string) {
       return { success: false, error: 'No autorizado' };
     }
 
-    // Eliminar todas las transacciones asociadas al producto
-    // (tanto como origen como destino)
-    await prisma.transaction.deleteMany({
-      where: {
-        OR: [
-          { fromProductId: id },
-          { toProductId: id }
-        ]
-      }
+    // Eliminar transacciones y summaries (transactional)
+    await prisma.$transaction(async (tx) => {
+      await tx.transaction.deleteMany({
+        where: {
+          OR: [
+            { fromProductId: id },
+            { toProductId: id }
+          ]
+        }
+      });
+
+      await tx.creditCardSummary.deleteMany({
+        where: { productId: id }
+      });
+
+      await tx.financialProduct.delete({
+        where: { id },
+      });
     });
 
-    // Eliminar todos los resúmenes de tarjeta asociados
-    await prisma.creditCardSummary.deleteMany({
-      where: { productId: id }
-    });
-
-    // Ahora eliminar el producto
-    await prisma.financialProduct.delete({
-      where: { id },
-    });
 
     revalidatePath('/accounts');
     return { success: true };
@@ -533,9 +540,8 @@ export async function deleteProduct(id: string) {
 
 export async function getAccountsPageData() {
   try {
-    const user = await getDemoUser();
+    const user = await requireUser();
 
-    // Obtener instituciones con sus productos
     const institutions = await prisma.financialInstitution.findMany({
       where: { userId: user.id },
       include: {
@@ -546,7 +552,6 @@ export async function getAccountsPageData() {
       orderBy: { name: 'asc' },
     });
 
-    // Obtener productos de efectivo (sin institución)
     const cashProducts = await prisma.financialProduct.findMany({
       where: {
         userId: user.id,
@@ -556,42 +561,19 @@ export async function getAccountsPageData() {
       orderBy: { name: 'asc' },
     });
 
-    // Obtener tipo de cambio USD/ARS
-    const usdToArsExchangeRate = await prisma.exchangeRate.findFirst({
-      where: {
-        fromCurrency: Currency.USD,
-        toCurrency: Currency.ARS,
-      },
-      orderBy: {
-        timestamp: 'desc',
-      },
-    });
+    // Use our new Helper for Exchange Rate (defaults included)
+    const usdToArsRate = await getLatestExchangeRate(Currency.USD, Currency.ARS);
 
     return {
       institutions: institutions.map(inst => ({
         ...inst,
+        // Serializamos date objects si existen en Inst
         createdAt: inst.createdAt.toISOString(),
         updatedAt: inst.updatedAt.toISOString(),
-        products: inst.products.map(p => ({
-          ...p,
-          balance: Number(p.balance),
-          limit: p.limit ? Number(p.limit) : null,
-          limitSinglePayment: p.limitSinglePayment ? Number(p.limitSinglePayment) : null,
-          limitInstallments: p.limitInstallments ? Number(p.limitInstallments) : null,
-          createdAt: p.createdAt.toISOString(),
-          updatedAt: p.updatedAt.toISOString(),
-        })),
+        products: inst.products.map(p => serializeFinancialProduct(p)),
       })),
-      cashProducts: cashProducts.map(p => ({
-        ...p,
-        balance: Number(p.balance),
-        limit: p.limit ? Number(p.limit) : null,
-        limitSinglePayment: p.limitSinglePayment ? Number(p.limitSinglePayment) : null,
-        limitInstallments: p.limitInstallments ? Number(p.limitInstallments) : null,
-        createdAt: p.createdAt.toISOString(),
-        updatedAt: p.updatedAt.toISOString(),
-      })),
-      usdToArsRate: usdToArsExchangeRate ? Number(usdToArsExchangeRate.rate) : null,
+      cashProducts: cashProducts.map(p => serializeFinancialProduct(p)),
+      usdToArsRate,
     };
   } catch (error) {
     console.error('Error obteniendo datos de cuentas:', error);
@@ -605,7 +587,7 @@ export async function getAccountsPageData() {
 
 export async function getProductDetails(productId: string) {
   try {
-    const user = await getDemoUser();
+    const user = await requireUser();
 
     const product = await prisma.financialProduct.findUnique({
       where: {
@@ -638,73 +620,10 @@ export async function getProductDetails(productId: string) {
       },
     });
 
+    // Tip: using serializeFinancialProduct for nested products ensures consistency
     return {
-      product: {
-        id: product.id,
-        name: product.name,
-        type: product.type,
-        currency: product.currency,
-        balance: Number(product.balance),
-        closingDay: product.closingDay,
-        dueDay: product.dueDay,
-        limit: product.limit ? Number(product.limit) : null,
-        limitSinglePayment: product.limitSinglePayment ? Number(product.limitSinglePayment) : null,
-        limitInstallments: product.limitInstallments ? Number(product.limitInstallments) : null,
-        sharedLimit: product.sharedLimit,
-        institutionId: product.institutionId,
-        lastFourDigits: product.lastFourDigits,
-        provider: (product as any).provider,
-        userId: product.userId,
-        createdAt: product.createdAt.toISOString(),
-        updatedAt: product.updatedAt.toISOString(),
-        institution: product.institution ? {
-          id: product.institution.id,
-          name: product.institution.name,
-          type: product.institution.type,
-          userId: product.institution.userId,
-          createdAt: product.institution.createdAt.toISOString(),
-          updatedAt: product.institution.updatedAt.toISOString(),
-        } : null,
-      },
-      transactions: transactions.map(t => ({
-        id: t.id,
-        amount: Number(t.amount),
-        date: t.date.toISOString(),
-        description: t.description,
-        status: t.status,
-        type: t.type,
-        categoryId: t.categoryId,
-        installmentNumber: t.installmentNumber,
-        installmentTotal: t.installmentTotal,
-        userId: t.userId,
-        fromProductId: t.fromProductId,
-        toProductId: t.toProductId,
-        category: t.category,
-        fromProduct: t.fromProduct ? {
-          id: t.fromProduct.id,
-          name: t.fromProduct.name,
-          type: t.fromProduct.type,
-          currency: t.fromProduct.currency,
-          balance: Number(t.fromProduct.balance),
-          limit: t.fromProduct.limit ? Number(t.fromProduct.limit) : null,
-          institutionId: t.fromProduct.institutionId,
-          userId: t.fromProduct.userId,
-          createdAt: t.fromProduct.createdAt.toISOString(),
-          updatedAt: t.fromProduct.updatedAt.toISOString(),
-        } : null,
-        toProduct: t.toProduct ? {
-          id: t.toProduct.id,
-          name: t.toProduct.name,
-          type: t.toProduct.type,
-          currency: t.toProduct.currency,
-          balance: Number(t.toProduct.balance),
-          limit: t.toProduct.limit ? Number(t.toProduct.limit) : null,
-          institutionId: t.toProduct.institutionId,
-          userId: t.toProduct.userId,
-          createdAt: t.toProduct.createdAt.toISOString(),
-          updatedAt: t.toProduct.updatedAt.toISOString(),
-        } : null,
-      })),
+      product: serializeFinancialProduct(product),
+      transactions: transactions.map(serializeTransaction),
     };
   } catch (error) {
     console.error('Error fetching product details:', error);

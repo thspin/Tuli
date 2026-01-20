@@ -51,6 +51,21 @@ export type {
 
 export { MONTH_NAMES } from './summary.types';
 
+// PDF Import types
+export type {
+    InstitutionCode,
+    CardType,
+    PDFAdjustmentType,
+    ParsedTransaction,
+    ParsedAdjustment,
+    ParsedStatement,
+    MatchType,
+    ReconciliationItem,
+    AdjustmentReconciliationItem,
+    ReconciliationResult,
+    ImportResult,
+} from './pdf-types';
+
 // Common types
 export type DisplayCurrency = 'ARS' | 'USD';
 

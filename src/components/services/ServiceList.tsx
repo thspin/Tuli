@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useState } from 'react';
-import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
+import Select from '../ui/Select';
 import { createService, updateServiceFromForm, deleteService } from '@/src/actions/services/service-actions';
+import { formatDate, toISODate } from '@/src/utils/date';
 
 interface ServiceListProps {
     services: any[];
@@ -32,68 +33,112 @@ export default function ServiceList({ services, categories, onRefresh }: Service
         }
     };
 
+    // Helper to infer icon based on service name
+    const getServiceIcon = (service: any) => {
+        const name = service.name.toLowerCase();
+        if (name.includes('gas') || name.includes('naturgy') || name.includes('metro')) return '🔥';
+        if (name.includes('luz') || name.includes('electric') || name.includes('edelar') || name.includes('edenor') || name.includes('edesur') || name.includes('coop')) return '⚡';
+        if (name.includes('agua') || name.includes('aysa')) return '💧';
+        if (name.includes('internet') || name.includes('wifi') || name.includes('fiber') || name.includes('telecentro') || name.includes('personal') || name.includes('flow') || name.includes('starlink')) return '🌐';
+        if (name.includes('celular') || name.includes('movil') || name.includes('claro') || name.includes('movistar') || name.includes('tuenti') || name.includes('linea')) return '📱';
+        if (name.includes('seguro') || name.includes('poliza') || name.includes('patronal') || name.includes('federacion') || name.includes('zurich') || name.includes('allianz')) return '🛡️';
+        if (name.includes('salud') || name.includes('medicina') || name.includes('prepaga') || name.includes('osde') || name.includes('swiss') || name.includes('galeno')) return '🏥';
+        if (name.includes('municipal') || name.includes('rentas') || name.includes('abl') || name.includes('patente') || name.includes('arba') || name.includes('agip')) return '🏛️';
+        if (name.includes('netflix') || name.includes('spotify') || name.includes('hbo') || name.includes('amazon') || name.includes('disney')) return '🎬';
+        return service.category.icon;
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-foreground">Mis Servicios Configurados</h2>
-                <Button onClick={() => setIsAddModalOpen(true)} icon={<span>+</span>}>
+                <h2 className="text-xl font-bold text-white glass-text">Mis Servicios Configurados</h2>
+                <Button
+                    onClick={() => setIsAddModalOpen(true)}
+                    variant="primary"
+                    size="sm"
+                    icon={<span className="material-symbols-outlined text-[18px]">add</span>}
+                >
                     Nuevo Servicio
                 </Button>
             </div>
 
             {services.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground bg-muted/30 rounded-xl border border-dashed border-border">
-                    <p className="text-lg mb-2">No hay servicios configurados</p>
-                    <p className="text-sm">Agregá un servicio para comenzar a gestionar tus pagos mensuales.</p>
+                <div className="glass-card p-12 text-center">
+                    <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white/30">
+                        <span className="material-symbols-outlined text-3xl">rss_feed</span>
+                    </div>
+                    <p className="text-lg font-bold text-white/70 glass-text">No hay servicios configurados</p>
+                    <p className="text-sm text-white/40 max-w-xs mx-auto mt-2">Agregá un servicio para comenzar a gestionar tus pagos mensuales.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {services.map(service => (
-                        <Card key={service.id} className="relative group">
-                            {/* Action Buttons */}
-                            <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                    onClick={() => setEditingService(service)}
-                                    className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                                    title="Editar"
-                                >
-                                    ✏️
-                                </button>
-                                <button
-                                    onClick={() => setDeletingService(service)}
-                                    className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                                    title="Eliminar"
-                                >
-                                    🗑️
-                                </button>
-                            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {services.map(service => {
+                        const icon = getServiceIcon(service);
+                        const isEmoji = icon && !/^[a-z0-9_]+$/.test(icon);
 
-                            <div className="flex justify-between items-start mb-2 pr-16">
-                                <h3 className="font-bold text-lg">{service.name}</h3>
-                                <span className={`text-xs px-2 py-1 rounded ${service.active ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
-                                    {service.active ? (service.defaultDueDay ? `Día ${service.defaultDueDay}` : 'Manual') : 'Inactivo'}
-                                </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-2">
-                                {service.category.name}
-                            </p>
-                            <p className="text-sm">
-                                Monto aprox: <b>${Number(service.defaultAmount || 0).toLocaleString('es-AR')}</b>
-                            </p>
-
-                            {service.paymentRules.length > 0 && (
-                                <div className="mt-3 pt-2 border-t border-border text-xs">
-                                    <span className="font-semibold text-blue-600">Beneficios Configurados: {service.paymentRules.length}</span>
+                        return (
+                            <div key={service.id} className="glass-card relative group overflow-hidden transition-all hover:bg-white/15">
+                                {/* Action Buttons */}
+                                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                    <button
+                                        onClick={() => setEditingService(service)}
+                                        className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 border border-white/10 text-white/40 hover:text-blue-400 hover:border-blue-400/30 hover:bg-blue-500/10 transition-all"
+                                        title="Editar"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setDeletingService(service)}
+                                        className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 border border-white/10 text-white/40 hover:text-red-400 hover:border-red-400/30 hover:bg-red-500/10 transition-all"
+                                        title="Eliminar"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                                    </button>
                                 </div>
-                            )}
 
-                            {service.renewalDate && (
-                                <div className="mt-2 text-xs text-amber-600">
-                                    Renueva: {new Date(service.renewalDate).toLocaleDateString('es-AR')}
+                                <div className="flex flex-col h-full">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white/70 text-2xl">
+                                            {isEmoji ? (
+                                                <span>{icon}</span>
+                                            ) : (
+                                                <span className="material-symbols-outlined">{icon || 'settings_input_component'}</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-white leading-none mb-1">{service.name}</h3>
+                                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">{service.category.name}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-auto space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-white/50 font-medium">Vencimiento:</span>
+                                            <span className={`text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-tight ${service.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'}`}>
+                                                {service.active ? (service.defaultDueDay ? `Día ${service.defaultDueDay}` : 'Manual') : 'Inactivo'}
+                                            </span>
+                                        </div>
+
+                                        {service.paymentRules.length > 0 && (
+                                            <div className="pt-3 border-t border-white/10 flex items-center gap-2 text-blue-400">
+                                                <span className="material-symbols-outlined text-[16px]">verified</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">{service.paymentRules.length} Reglas de Pago</span>
+                                            </div>
+                                        )}
+
+                                        {service.renewalDate && (
+                                            <div className="flex items-center gap-2 text-amber-400">
+                                                <span className="material-symbols-outlined text-[16px]">event_repeat</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">
+                                                    Renueva: {formatDate(service.renewalDate)}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            )}
-                        </Card>
-                    ))}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
@@ -127,19 +172,35 @@ export default function ServiceList({ services, categories, onRefresh }: Service
                 isOpen={!!deletingService}
                 onClose={() => setDeletingService(null)}
                 title="Eliminar Servicio"
+                description={`¿Querés eliminar permanentemente ${deletingService?.name}?`}
+                icon={<span className="material-symbols-outlined">delete_sweep</span>}
+                size="sm"
             >
-                <div className="space-y-4">
-                    <p className="text-foreground">
-                        ¿Estás seguro de que querés eliminar <b>{deletingService?.name}</b>?
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                        Esta acción eliminará también todas las boletas asociadas a este servicio.
-                    </p>
-                    <div className="flex justify-end gap-3 pt-4">
-                        <Button type="button" variant="ghost" onClick={() => setDeletingService(null)}>
+                <div className="space-y-6">
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                            <span className="material-symbols-outlined text-red-400">report</span>
+                        </div>
+                        <p className="text-sm text-red-300 font-medium">
+                            <span className="font-bold">¡Cuidado!</span> Esta acción eliminará también todas las boletas históricas asociadas a este servicio.
+                        </p>
+                    </div>
+                    <div className="flex gap-4">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setDeletingService(null)}
+                            className="flex-1"
+                        >
                             Cancelar
                         </Button>
-                        <Button variant="danger" onClick={handleDelete} loading={isDeleting}>
+                        <Button
+                            variant="danger"
+                            onClick={handleDelete}
+                            loading={isDeleting}
+                            className="flex-1"
+                            icon={<span className="material-symbols-outlined">delete_forever</span>}
+                        >
                             Eliminar
                         </Button>
                     </div>
@@ -182,70 +243,86 @@ function ServiceFormModal({ isOpen, onClose, categories, service, onSuccess }: S
 
     const formatDateForInput = (date: string | Date | null) => {
         if (!date) return '';
-        const d = new Date(date);
-        return d.toISOString().split('T')[0];
+        return toISODate(date);
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? "Editar Servicio" : "Nuevo Servicio"}>
-            <form action={handleSubmit} className="space-y-4">
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={isEditing ? "Editar Servicio" : "Nuevo Servicio"}
+            description={isEditing ? "Modifica los detalles del servicio configurado" : "Configura un nuevo servicio para gestionar tus pagos"}
+            icon={<span className="material-symbols-outlined">{isEditing ? 'edit_square' : 'add_task'}</span>}
+            size="md"
+        >
+            <form action={handleSubmit} className="space-y-6">
                 <Input
                     name="name"
                     label="Nombre del Servicio"
-                    placeholder="Ej. Internet, Luz"
+                    placeholder="Ej. Fibertel, Edenor, Expensas"
                     defaultValue={service?.name || ''}
                     required
                 />
 
-                <div className="w-full">
-                    <label className="block text-sm font-medium text-foreground mb-2">Categoría</label>
-                    <select
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Select
                         name="categoryId"
-                        className="w-full p-3 border border-border rounded-xl bg-background text-foreground"
+                        label="Categoría"
                         defaultValue={service?.categoryId || ''}
                         required
                     >
-                        <option value="">Seleccionar Categoría...</option>
+                        <option value="" className="bg-slate-800">Seleccionar Categoría...</option>
                         {categories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            <option key={cat.id} value={cat.id} className="bg-slate-800">{cat.name}</option>
                         ))}
-                    </select>
+                    </Select>
+
+                    <Input
+                        name="renewalDate"
+                        label="Fin de Promoción"
+                        type="date"
+                        defaultValue={formatDateForInput(service?.renewalDate)}
+                    />
                 </div>
 
-
-                <Input
-                    name="renewalDate"
-                    label="Fecha de Fin de Promo (Opcional)"
-                    type="date"
-                    defaultValue={formatDateForInput(service?.renewalDate)}
-                />
                 <Input
                     name="renewalNote"
-                    label="Nota de Renovación"
+                    label="Nota / Recordatorio"
                     placeholder="Ej. Llamar para pedir descuento"
                     defaultValue={service?.renewalNote || ''}
                 />
 
                 {isEditing && (
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            name="active"
-                            id="active"
-                            value="true"
-                            defaultChecked={service?.active !== false}
-                            className="w-4 h-4 rounded border-border"
-                        />
-                        <label htmlFor="active" className="text-sm text-foreground">
-                            Servicio Activo
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white/50">
+                                <span className="material-symbols-outlined">power_settings_new</span>
+                            </div>
+                            <div>
+                                <p className="text-xs font-bold text-white leading-none mb-1">Estado del Servicio</p>
+                                <p className="text-[10px] text-white/40 font-medium">Define si el servicio aparece en tu agenda</p>
+                            </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                name="active"
+                                id="active"
+                                value="true"
+                                defaultChecked={service?.active !== false}
+                                className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
                         </label>
                     </div>
                 )}
 
-                <div className="flex justify-end gap-3 pt-4">
-                    <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-                    <Button type="submit" loading={isLoading}>
-                        {isEditing ? 'Guardar Cambios' : 'Crear'}
+                <div className="flex gap-4 pt-4">
+                    <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
+                        Cancelar
+                    </Button>
+                    <Button type="submit" variant="primary" loading={isLoading} className="flex-1" icon={<span className="material-symbols-outlined">save</span>}>
+                        {isEditing ? 'Guardar Cambios' : 'Crear Servicio'}
                     </Button>
                 </div>
             </form>

@@ -13,13 +13,15 @@ import {
   CARD_PROVIDER_LABELS,
   CARD_PROVIDER_LOGOS
 } from '@/src/types';
-import { Modal, Button } from '@/src/components/ui';
+import { Modal, Input, Select, Button } from '@/src/components/ui';
 
 interface AddProductButtonProps {
   mode?: 'create' | 'edit';
   product?: Product;
   institutionId?: string;
   institutions?: InstitutionWithProducts[];
+  variant?: 'default' | 'menuItem';
+  onCloseMenu?: () => void;
 }
 
 export default function AddProductButton({
@@ -27,6 +29,8 @@ export default function AddProductButton({
   product,
   institutionId,
   institutions = [],
+  variant = 'default',
+  onCloseMenu,
 }: AddProductButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [productType, setProductType] = useState<ProductType>(product?.type || 'SAVINGS_ACCOUNT');
@@ -72,7 +76,6 @@ export default function AddProductButton({
 
   // Determinar monedas disponibles según institución
   const getAvailableCurrencies = (): Currency[] => {
-    // ... (existing code)
     if (productType === 'CASH') {
       return ['ARS', 'USD'];
     }
@@ -91,13 +94,6 @@ export default function AddProductButton({
 
     return ['ARS', 'USD'];
   };
-
-  // Effect for auto-selecting savings account
-  // Note: I can't easily add useEffect here without changing the whole file structure or imports.
-  // I'll try to do it in one go or use a separate tool call for imports.
-  // Let's assume I can add the logic inside the render or just use a callback, but useEffect is better.
-
-  // Let's rewrite the component start to include useEffect and the new logic.
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -180,28 +176,19 @@ export default function AddProductButton({
   };
 
   const handleDelete = async () => {
-    console.log('handleDelete called', { product, mode });
-    if (!product || mode !== 'edit') {
-      console.log('handleDelete returning early: invalid product or mode');
-      return;
-    }
+    if (!product || mode !== 'edit') return;
 
-    // Confirmación ya manejada por UI state
-    console.log('handleDelete proceeding with deletion');
     setIsSubmitting(true);
     setError(null);
 
     try {
       const result = await deleteProduct(product.id);
-      console.log('deleteProduct result:', result);
-
       if (result.success) {
         setIsOpen(false);
       } else {
         setError(result.error || 'Error al eliminar');
       }
     } catch (err) {
-      console.error('deleteProduct error:', err);
       setError('Error al eliminar el producto');
     } finally {
       setIsSubmitting(false);
@@ -210,30 +197,47 @@ export default function AddProductButton({
 
   const availableCurrencies = getAvailableCurrencies();
 
-  // Auto-select effect logic (simulated in render or added via replace)
-  if (productType === 'DEBIT_CARD' && availableSavingsAccounts.length === 1 && !linkedProductId) {
-    // This is a side effect in render, which is bad practice but might work for a quick fix. 
-    // Better to use useEffect. I will add useEffect in the imports.
-    // For now, I'll rely on the user selecting it or the fallback in handleSubmit, 
-    // BUT the prompt says "la app seleccionara esta por default y no preguntara".
-    // So I should set the default value in the state or the select.
-  }
-
   return (
     <>
-      {mode === 'create' ? (
-        <Button onClick={() => setIsOpen(true)} variant="primary">
-          + Nuevo Producto
+      {variant === 'menuItem' ? (
+        <button
+          onClick={() => {
+            setIsOpen(true);
+            onCloseMenu?.();
+          }}
+          className="w-full flex items-center gap-4 px-4 py-4 text-sm text-white hover:bg-white/[0.08] transition-all duration-300 rounded-2xl group relative overflow-hidden"
+        >
+          <div className="relative flex-shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 flex items-center justify-center text-white/80 group-hover:text-white group-hover:scale-110 transition-all duration-500 shadow-xl overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <span className="material-symbols-outlined text-[24px] relative z-10">add_circle</span>
+          </div>
+
+          <div className="flex flex-col items-start gap-0.5 relative z-10">
+            <span className="font-bold text-[15px] tracking-tight text-white/90 group-hover:text-white transition-colors">
+              Nuevo Producto
+            </span>
+            <span className="text-[10px] text-white/40 uppercase tracking-[0.08em] font-bold">
+              Cuentas o tarjetas
+            </span>
+          </div>
+
+          <div className="ml-auto opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+            <span className="material-symbols-outlined text-white/40 text-[20px]">chevron_right</span>
+          </div>
+
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent -translate-x-full group-hover:animate-shimmer" />
+        </button>
+      ) : mode === 'create' ? (
+        <Button onClick={() => setIsOpen(true)} variant="primary" size="sm" icon={<span className="material-symbols-outlined">add_circle</span>}>
+          Nuevo Producto
         </Button>
       ) : (
         <button
           onClick={() => setIsOpen(true)}
-          className="text-gray-400 hover:text-blue-600 transition-colors p-1"
+          className="text-white/40 hover:text-blue-400 transition-colors p-1"
           title="Editar producto"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-          </svg>
+          <span className="material-symbols-outlined text-[20px]">edit_square</span>
         </button>
       )}
 
@@ -244,424 +248,297 @@ export default function AddProductButton({
             setIsOpen(false);
             setError(null);
           }}
-          title={mode === 'edit' ? 'Editar Producto' : 'Nuevo Producto Financiero'}
+          title={mode === 'edit' ? 'Editar Producto' : 'Nuevo Producto'}
+          description={mode === 'edit' ? 'Actualiza los detalles de tu producto' : 'Configura una nueva cuenta o tarjeta'}
+          icon={<span className="material-symbols-outlined">account_balance_wallet</span>}
+          size="md"
         >
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400 text-sm">
+              <span className="material-symbols-outlined text-[20px]">error</span>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Producto
-              </label>
-              <select
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Select
+                label="Tipo de Producto"
                 name="type"
                 value={productType}
                 onChange={(e) => {
                   const newType = e.target.value as ProductType;
                   setProductType(newType);
-                  if (newType === 'CASH') {
-                    setSelectedInstitutionId(undefined);
-                  }
-                  // Reset linked product when type changes
-                  if (newType !== 'DEBIT_CARD') {
-                    setLinkedProductId(undefined);
-                  }
+                  if (newType === 'CASH') setSelectedInstitutionId(undefined);
+                  if (newType !== 'DEBIT_CARD') setLinkedProductId(undefined);
                 }}
                 required
                 disabled={isSubmitting || mode === 'edit'}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               >
                 {Object.entries(PRODUCT_TYPE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
 
-            {productType !== 'CASH' && mode === 'create' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Institución
-                </label>
-                <select
+              {productType !== 'CASH' && (
+                <Select
+                  label="Institución"
                   name="institutionId"
                   value={selectedInstitutionId || ''}
                   onChange={(e) => {
                     setSelectedInstitutionId(e.target.value);
-                    setLinkedProductId(undefined); // Reset when institution changes
+                    setLinkedProductId(undefined);
                   }}
                   required
-                  disabled={isSubmitting || !!institutionId}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                  disabled={isSubmitting || (mode === 'edit' && !!product?.institutionId) || !!institutionId}
                 >
-                  <option value="">Seleccionar institución...</option>
+                  <option value="">Seleccionar...</option>
                   {institutions.map((inst) => (
                     <option key={inst.id} value={inst.id}>
-                      {inst.name} ({inst.type === 'BANK' ? 'Banco' : 'Billetera'})
+                      {inst.name}
                     </option>
                   ))}
-                </select>
-              </div>
-            )}
+                </Select>
+              )}
+            </div>
 
-            {/* DEBIT CARD LINKING */}
-            {productType === 'DEBIT_CARD' && selectedInstitutionId && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Vincular a Caja de Ahorro
-                </label>
-                {availableSavingsAccounts.length === 0 ? (
-                  <div className="text-red-600 text-sm p-2 bg-red-50 rounded border border-red-200">
-                    Esta institución no tiene cajas de ahorro. Debes crear una primero.
-                  </div>
-                ) : (
-                  <select
-                    name="linkedProductId"
-                    value={linkedProductId || (availableSavingsAccounts.length === 1 ? availableSavingsAccounts[0].id : '')}
-                    onChange={(e) => setLinkedProductId(e.target.value)}
-                    required
-                    disabled={isSubmitting || availableSavingsAccounts.length === 1}
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                  >
-                    <option value="">Seleccionar cuenta...</option>
-                    {availableSavingsAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.name} ({acc.currency}) - Saldo: ${acc.balance}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {availableSavingsAccounts.length === 1 && (
-                  <p className="mt-1 text-xs text-blue-600">
-                    Seleccionada automáticamente (única cuenta disponible)
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre del Producto
-              </label>
-              <input
-                type="text"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="Nombre del Producto"
                 name="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ej: Visa Débito"
                 required
                 disabled={isSubmitting}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               />
-            </div>
 
-            {(productType === 'CREDIT_CARD' || productType === 'DEBIT_CARD') && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Últimos 4 dígitos
-                  </label>
-                  <input
-                    type="text"
-                    name="lastFourDigits"
-                    maxLength={4}
-                    pattern="\d{4}"
-                    defaultValue={product?.lastFourDigits || ''}
-                    placeholder="Ej: 1234"
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                {productType === 'CREDIT_CARD' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Proveedor
-                    </label>
-                    <select
-                      name="provider"
-                      defaultValue={product?.provider || 'VISA'}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {Object.entries(CARD_PROVIDER_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Moneda
-              </label>
-              <select
+              <Select
+                label="Moneda"
                 name="currency"
                 defaultValue={product?.currency || 'ARS'}
                 required
                 disabled={isSubmitting}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               >
                 {availableCurrencies.map((currency) => (
                   <option key={currency} value={currency}>
                     {CURRENCY_LABELS[currency]}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
-            {/* Hide balance for Debit Card */}
+            {/* DEBIT CARD LINKING */}
+            {productType === 'DEBIT_CARD' && selectedInstitutionId && (
+              <div className="p-5 bg-blue-500/10 border border-blue-400/20 rounded-2xl space-y-3">
+                <Select
+                  label="Vincular a Caja de Ahorro"
+                  name="linkedProductId"
+                  value={linkedProductId || (availableSavingsAccounts.length === 1 ? availableSavingsAccounts[0].id : '')}
+                  onChange={(e) => setLinkedProductId(e.target.value)}
+                  required
+                  disabled={isSubmitting || availableSavingsAccounts.length <= 1}
+                >
+                  <option value="" className="bg-slate-800">Seleccionar cuenta...</option>
+                  {availableSavingsAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id} className="bg-slate-800">
+                      {acc.name} ({acc.currency})
+                    </option>
+                  ))}
+                </Select>
+                {availableSavingsAccounts.length === 0 && (
+                  <p className="text-xs text-red-400 ml-1 italic">
+                    * Esta institución no tiene cajas de ahorro. Crea una primero.
+                  </p>
+                )}
+                {availableSavingsAccounts.length === 1 && (
+                  <p className="text-[10px] text-blue-300 ml-1 italic">
+                    * Seleccionada automáticamente.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {(productType === 'CREDIT_CARD' || productType === 'DEBIT_CARD') && (
+              <div className="grid grid-cols-2 gap-6">
+                <Input
+                  label="Últimos 4 dígs"
+                  name="lastFourDigits"
+                  maxLength={4}
+                  pattern="\d{4}"
+                  defaultValue={product?.lastFourDigits || ''}
+                  placeholder="Ej: 1234"
+                />
+                {productType === 'CREDIT_CARD' && (
+                  <Select
+                    label="Proveedor"
+                    name="provider"
+                    defaultValue={product?.provider || 'VISA'}
+                  >
+                    {Object.entries(CARD_PROVIDER_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </div>
+            )}
+
             {productType !== 'DEBIT_CARD' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Saldo {productType === 'CREDIT_CARD' || productType === 'LOAN' ? 'Actual (deuda)' : 'Inicial'}
-                </label>
-                <input
+              <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
+                <Input
+                  label={productType === 'CREDIT_CARD' || productType === 'LOAN' ? 'Deuda Actual' : 'Saldo Inicial'}
                   type="number"
                   name="balance"
                   step="0.01"
                   defaultValue={product?.balance || 0}
                   required
                   disabled={isSubmitting || mode === 'edit'}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
                 />
-                {mode === 'edit' && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    El saldo se modifica mediante transacciones
-                  </p>
-                )}
-                {mode === 'create' && (productType === 'CREDIT_CARD' || productType === 'LOAN') && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    Ingrese valores negativos para deuda (ej: -1500)
-                  </p>
-                )}
-              </div>
-            )}
-
-            {productType === 'DEBIT_CARD' && (
-              <div className="p-3 bg-blue-50 text-blue-700 rounded-lg text-sm">
-                ℹ️ Las tarjetas de débito no tienen saldo propio. Utilizan el saldo de la caja de ahorro vinculada.
-              </div>
-            )}
-
-            {/* ... (rest of the form) */}
-
-
-            {productType === 'LOAN' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Límite Disponible del Préstamo
-                </label>
-                <input
-                  type="number"
-                  name="limit"
-                  step="0.01"
-                  defaultValue={product?.limit || ''}
-                  required
-                  disabled={isSubmitting}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Monto máximo que se puede solicitar en el préstamo
+                <p className="mt-2 text-[10px] text-white/40 ml-1">
+                  {mode === 'edit'
+                    ? '* El saldo se modifica mediante transacciones'
+                    : productType === 'CREDIT_CARD' || productType === 'LOAN'
+                      ? '* Ingrese valores negativos para deuda (ej: -1500)'
+                      : '* Saldo disponible al momento de crear'}
                 </p>
               </div>
             )}
 
-            {productType === 'CREDIT_CARD' && (
-              <>
-                {unifiedLimit ? (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Límite de Crédito
-                    </label>
-                    <input
-                      type="number"
-                      name="limitSinglePayment"
-                      step="0.01"
-                      defaultValue={hasSharedLimit ? (sharedLimitSinglePayment || '') : (product?.limitSinglePayment || product?.limit || '')}
-                      required
-                      disabled={isSubmitting || hasSharedLimit}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Este límite se comparte entre compras en cuotas y en 1 pago
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Límite en Un Pago
-                      </label>
-                      <input
-                        type="number"
-                        name="limitSinglePayment"
-                        step="0.01"
-                        defaultValue={hasSharedLimit ? (sharedLimitSinglePayment || '') : (product?.limitSinglePayment || product?.limit || '')}
-                        required
-                        disabled={isSubmitting || hasSharedLimit}
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Para compras en una sola cuota
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Límite en Cuotas
-                      </label>
-                      <input
-                        type="number"
-                        name="limitInstallments"
-                        step="0.01"
-                        defaultValue={hasSharedLimit ? (sharedLimitInstallments || '') : (product?.limitInstallments || product?.limit || '')}
-                        required
-                        disabled={isSubmitting || hasSharedLimit}
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Para compras en cuotas
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {hasSharedLimit && (
-                  <p className="mt-1 text-xs text-blue-600">
-                    Esta tarjeta comparte los límites con otras tarjetas de {selectedInstitution?.name}
-                  </p>
-                )}
-
-                {!hasSharedLimit && (
-                  <>
-                    <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                      <input
-                        type="checkbox"
-                        id="sharedLimit"
-                        name="sharedLimit"
-                        checked={sharedLimit}
-                        onChange={(e) => setSharedLimit(e.target.checked)}
-                        disabled={isSubmitting}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                      />
-                      <label htmlFor="sharedLimit" className="text-sm text-gray-700 cursor-pointer">
-                        Compartir límite con otras tarjetas de esta institución
-                      </label>
-                    </div>
-
-                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                      <input
-                        type="checkbox"
-                        id="unifiedLimit"
-                        name="unifiedLimit"
-                        checked={unifiedLimit}
-                        onChange={(e) => setUnifiedLimit(e.target.checked)}
-                        disabled={isSubmitting}
-                        className="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500"
-                      />
-                      <label htmlFor="unifiedLimit" className="text-sm text-gray-700 cursor-pointer">
-                        Usar mismo límite para cuotas y 1 pago
-                      </label>
-                    </div>
-                  </>
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Día de Cierre
-                    </label>
-                    <input
-                      type="number"
-                      name="closingDay"
-                      min="1"
-                      max="31"
-                      defaultValue={product?.closingDay || ''}
-                      required
-                      disabled={isSubmitting}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Día de Vencimiento
-                    </label>
-                    <input
-                      type="number"
-                      name="dueDay"
-                      min="1"
-                      max="31"
-                      defaultValue={product?.dueDay || ''}
-                      required
-                      disabled={isSubmitting}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                    />
-                  </div>
-                </div>
-              </>
+            {productType === 'LOAN' && (
+              <Input
+                label="Límite Disponible del Préstamo"
+                type="number"
+                name="limit"
+                step="0.01"
+                defaultValue={product?.limit || ''}
+                required
+                disabled={isSubmitting}
+              />
             )}
 
-            <div className="flex gap-3 pt-4">
-              <button
+            {productType === 'CREDIT_CARD' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label={unifiedLimit ? "Límite Total" : "Límite Un Pago"}
+                    type="number"
+                    name="limitSinglePayment"
+                    step="0.01"
+                    defaultValue={hasSharedLimit ? (sharedLimitSinglePayment || '') : (product?.limitSinglePayment || product?.limit || '')}
+                    required
+                    disabled={isSubmitting || hasSharedLimit}
+                  />
+                  {!unifiedLimit && (
+                    <Input
+                      label="Límite Cuotas"
+                      type="number"
+                      name="limitInstallments"
+                      step="0.01"
+                      defaultValue={hasSharedLimit ? (sharedLimitInstallments || '') : (product?.limitInstallments || product?.limit || '')}
+                      required
+                      disabled={isSubmitting || hasSharedLimit}
+                    />
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label="Día de Cierre"
+                    type="number"
+                    name="closingDay"
+                    min="1"
+                    max="31"
+                    defaultValue={product?.closingDay || ''}
+                    required
+                    disabled={isSubmitting}
+                  />
+                  <Input
+                    label="Día de Vencimiento"
+                    type="number"
+                    name="dueDay"
+                    min="1"
+                    max="31"
+                    defaultValue={product?.dueDay || ''}
+                    required
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-4">
+                  {!hasSharedLimit && (
+                    <label className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-2xl cursor-pointer hover:bg-white/10 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={sharedLimit}
+                        onChange={(e) => setSharedLimit(e.target.checked)}
+                        className="w-5 h-5 rounded-lg border-white/30 bg-transparent text-blue-500 focus:ring-blue-500/20"
+                      />
+                      <span className="text-xs font-bold text-white/60 uppercase tracking-tight">Compartir límite</span>
+                    </label>
+                  )}
+                  <label className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-2xl cursor-pointer hover:bg-white/10 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={unifiedLimit}
+                      onChange={(e) => setUnifiedLimit(e.target.checked)}
+                      className="w-5 h-5 rounded-lg border-white/30 bg-transparent text-blue-500 focus:ring-blue-500/20"
+                    />
+                    <span className="text-xs font-bold text-white/60 uppercase tracking-tight">Límite unificado</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-4 pt-4">
+              <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="primary"
+                loading={isSubmitting}
+                className="flex-[2]"
+                icon={<span className="material-symbols-outlined">check_circle</span>}
               >
-                {isSubmitting ? 'Procesando...' : mode === 'edit' ? 'Guardar Cambios' : 'Crear Producto'}
-              </button>
+                {mode === 'edit' ? 'Guardar Cambios' : 'Crear Producto'}
+              </Button>
 
               {mode === 'edit' && (
-                <>
+                <div className="flex-1 flex">
                   {!showDeleteConfirm ? (
-                    <button
+                    <Button
                       type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowDeleteConfirm(true);
-                      }}
+                      variant="danger"
+                      onClick={() => setShowDeleteConfirm(true)}
                       disabled={isSubmitting}
-                      className="px-4 bg-red-100 hover:bg-red-200 text-red-700 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full"
                     >
                       Eliminar
-                    </button>
+                    </Button>
                   ) : (
-                    <div className="flex gap-2">
-                      <button
+                    <div className="flex gap-2 w-full animate-in slide-in-from-right-2">
+                      <Button
                         type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setShowDeleteConfirm(false);
-                        }}
+                        variant="secondary"
+                        onClick={() => setShowDeleteConfirm(false)}
                         disabled={isSubmitting}
-                        className="px-3 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium transition-colors text-sm"
+                        className="flex-1"
                       >
-                        Cancelar
-                      </button>
-                      <button
+                        No
+                      </Button>
+                      <Button
                         type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleDelete();
-                        }}
+                        variant="danger"
+                        onClick={handleDelete}
                         disabled={isSubmitting}
-                        className="px-3 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-medium transition-colors text-sm"
+                        className="flex-1"
                       >
-                        Confirmar
-                      </button>
+                        Sí
+                      </Button>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
           </form>

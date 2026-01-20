@@ -63,34 +63,20 @@
 
 ---
 
-### 📍 Fase 3: Automatización e Inteligencia (❌ PLANIFICADA)
+### 📍 Fase 3: Automatización y Herramientas (❌ PLANIFICADA)
 
-**Objetivo:** Automatizar procesos y agregar capacidades inteligentes
+**Objetivo:** Automatizar procesos y agregar herramientas de productividad
 
-- ❌ **WhatsApp Integration**
-  - Carga de transacciones por texto
-  - Carga por audio
-  - Carga por fotos de tickets
-  - Consultas de saldo
-  - Notificaciones de vencimientos
-  
 - ❌ **Calendario Financiero**
   - Vista mensual de vencimientos
   - Recordatorios de pagos
   - Planificación de gastos futuros
   - Integración con resúmenes
   
-- ❌ **Clasificación automática de categorías**
-  - ML para categorización
-  - Aprendizaje del comportamiento
-  - Sugerencias de categorías
-  - Mejora continua
-  
 - ❌ **Metas de ahorro e inversión**
   - Definir objetivos financieros
   - Tracking de progreso
   - Alertas de desviación
-  - Sugerencias de ahorro
   
 - ❌ **Transferencias entre cuentas**
   - Mover dinero entre productos
@@ -99,40 +85,7 @@
 
 **Estado:** ❌ 0% Completada
 
-**Estimación:** 3-4 meses de desarrollo
-
----
-
-### 📍 Fase 4: Análisis Avanzado e IA (❌ VISIÓN FUTURA)
-
-**Objetivo:** Convertir Tuli en un asesor financiero inteligente
-
-- ❌ **Dashboard con gráficos avanzados**
-  - Gráficos de gastos por categoría
-  - Tendencias mensuales/anuales
-  - Comparativas período a período
-  - Proyecciones futuras
-  - Análisis de patrones de gasto
-  
-- ❌ **Control de Inversiones/Seguros**
-  - Registro de inversiones
-  - Tracking de rendimientos
-  - Gestión de seguros
-  - Alertas de renovación
-  - Portfolio diversificado
-  
-- ❌ **Agente IA nativo**
-  - Asistente conversacional
-  - Recomendaciones personalizadas
-  - Detección de gastos anómalos
-  - Optimización de gastos
-  - Sugerencias de inversión
-  - Planificación financiera automática
-  - Alertas proactivas
-
-**Estado:** ❌ 0% Completada
-
-**Estimación:** 6-8 meses de desarrollo (requiere infraestructura IA)
+**Estimación:** 2-3 meses de desarrollo
 
 ---
 
@@ -142,9 +95,8 @@
 Fase 1: ████████████████████ 100% ✅
 Fase 2: ████████████████░░░░  80% 🚧
 Fase 3: ░░░░░░░░░░░░░░░░░░░░   0% ❌
-Fase 4: ░░░░░░░░░░░░░░░░░░░░   0% ❌
 
-Total:  ██████████░░░░░░░░░░  45% 
+Total:  ████████████░░░░░░░░  60% 
 ```
 
 **Próximo Milestone:** Completar Gestor de Servicios (Fase 2)
@@ -154,12 +106,12 @@ Total:  ██████████░░░░░░░░░░  45%
 ## 1. OBJETIVO DEL PROYECTO ✅
 
 **Objetivo Principal:**
-Crear una aplicación integral de tracking de finanzas personales que permita el posterior procesamiento de datos para que un agente de IA ayude al usuario a alcanzar sus objetivos de ahorro e inversión.
+Crear una aplicación integral de tracking de finanzas personales para que el usuario pueda alcanzar sus objetivos de ahorro e inversión.
 
 **Problemas que Resuelve:**
 
 1. ✅ Tedioso control manual de gastos e ingresos
-2. ❌ Decisiones financieras impulsivas vs planificadas (pendiente: agente IA)
+2. ❌ Falta de planificación financiera (pendiente: herramientas de planificación)
 
 ---
 
@@ -256,7 +208,7 @@ Crear una aplicación integral de tracking de finanzas personales que permita el
 - ✅ Categoría
 - ✅ Cuenta de origen
 - ✅ Cuenta de destino (en transferencias)
-- ❌ Clasificación automática por IA (pendiente)
+- ❌ Recordatorios automáticos (pendiente)
 
 ### ✅ 4.3 Categorías
 
@@ -264,7 +216,7 @@ Crear una aplicación integral de tracking de finanzas personales que permita el
 - ✅ Usuario puede editar/eliminar categorías
 - ✅ Categorías del sistema protegidas
 - ✅ Iconos personalizables (emojis)
-- ❌ Clasificación automática por IA (pendiente)
+- ❌ Personalización avanzada (pendiente)
 
 ### ✅ 4.4 Edición y Eliminación
 
@@ -309,19 +261,12 @@ Crear una aplicación integral de tracking de finanzas personales que permita el
 
 ## 7. FUTURO (post-MVP) - Roadmap
 
-### ❌ Fase 2: Integración con IA (Pendiente)
+### ❌ Fase 2: Automatización (Pendiente)
 
-- ❌ Integración con WhatsApp
-  - ❌ Carga de transacciones por texto
-  - ❌ Carga por audio
-  - ❌ Carga por fotos de tickets
-- ❌ Agente de IA
-  - ❌ Aprendizaje del comportamiento del usuario
-  - ❌ Recomendaciones de gastos
-  - ❌ Sugerencias de promociones
-  - ❌ Consejos de inversión
-  - ❌ Alertas de vencimientos
-  - ❌ Limitación de gastos según metas
+- ❌ Notificaciones de vencimientos
+- ❌ Sugerencias de promociones
+- ❌ Consejos de ahorro
+- ❌ Limitación de gastos según metas
 
 ### ❌ Fase 3: Metas y Planificación (Pendiente)
 
@@ -394,9 +339,6 @@ Crear una aplicación integral de tracking de finanzas personales que permita el
 
 ### ❌ Pendiente (Post-MVP)
 
-- ❌ Integración WhatsApp
-- ❌ Agente de IA
-- ❌ Clasificación automática
 - ❌ Metas de ahorro
 - ❌ Transferencias entre cuentas
 - ❌ Gráficos avanzados
@@ -418,13 +360,13 @@ Crear una aplicación integral de tracking de finanzas personales que permita el
 5. ❌ Presupuestos por categoría
 6. ❌ Exportación de datos (CSV/Excel)
 
-### Prioridad Baja (Requiere IA)
+### Prioridad Baja
 
-7. ❌ Integración con WhatsApp
-8. ❌ Clasificación automática de transacciones
-9. ❌ Agente de IA con recomendaciones
+7. ❌ Sistema de exportación masiva
+8. ❌ Soporte para adjuntar archivos a transacciones
+9. ❌ Herramientas de planificación avanzada
 
 ---
 
-**Última actualización:** 2025-11-26  
-**Estado:** MVP Completado ✅ | Listo para Fase 2 ❌
+**Última actualización:** 2026-01-03  
+**Estado:** MVP Completado ✅ | Listo para Fase 2 🚧

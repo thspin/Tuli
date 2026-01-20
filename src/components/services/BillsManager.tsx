@@ -8,10 +8,12 @@ import PayServiceModal from './PayServiceModal';
 import AddBillModal from './AddBillModal';
 import EditBillModal from './EditBillModal';
 import { deleteBill } from '@/src/actions/services/service-actions';
+import { formatDate } from '@/src/utils/date';
+import { getServiceIcon } from '@/src/utils/service-icons';
 
 interface BillsManagerProps {
     bills: any[];
-    overdueBills?: any[]; // Optional to avoid breaking if not passed initially
+    overdueBills?: any[];
     services: any[];
     onRefresh: () => void;
     currentDate: Date;
@@ -58,62 +60,62 @@ export default function BillsManager({ bills, overdueBills = [], services, onRef
 
     return (
         <div className="space-y-6">
-            {/* Summary Cards */}
+            {/* Summary Cards - Glass Style */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                <div className="glass-card p-5">
                     <div className="flex flex-col">
-                        <span className="text-sm font-medium text-muted-foreground">Total a Pagar</span>
-                        <span className="text-3xl font-bold text-primary mt-1">
+                        <span className="text-xs font-bold text-white/50 uppercase tracking-wider">Total a Pagar</span>
+                        <span className="text-3xl font-black text-white mt-2">
                             ${totalToPay.toLocaleString('es-AR')}
                         </span>
-                        <div className="flex gap-2 mt-2 text-xs">
-                            <span className={overdueBills.length > 0 ? "text-destructive font-semibold" : "text-muted-foreground"}>
+                        <div className="flex gap-2 mt-3 text-xs">
+                            <span className={overdueBills.length > 0 ? "text-red-400 font-semibold" : "text-white/40"}>
                                 {overdueBills.length > 0 ? `${overdueBills.length} vencidas` : "0 vencidas"}
                             </span>
-                            <span className="text-muted-foreground">•</span>
-                            <span className="text-muted-foreground">{pendingBills.length} del mes</span>
+                            <span className="text-white/30">•</span>
+                            <span className="text-white/40">{pendingBills.length} del mes</span>
                         </div>
                     </div>
-                </Card>
-                <Card className="bg-gradient-to-br from-success/10 to-success/5 border-success/20">
+                </div>
+                <div className="glass-card p-5">
                     <div className="flex flex-col">
-                        <span className="text-sm font-medium text-muted-foreground">Pagado este Mes</span>
-                        <span className="text-3xl font-bold text-success mt-1">
+                        <span className="text-xs font-bold text-white/50 uppercase tracking-wider">Pagado este Mes</span>
+                        <span className="text-3xl font-black text-emerald-400 mt-2">
                             ${totalPaid.toLocaleString('es-AR')}
                         </span>
-                        <span className="text-xs text-muted-foreground mt-2">{paidBills.length} facturas pagadas</span>
+                        <span className="text-xs text-white/40 mt-3">{paidBills.length} facturas pagadas</span>
                     </div>
-                </Card>
-                <Card>
+                </div>
+                <div className="glass-card p-5">
                     <div className="flex flex-col">
-                        <span className="text-sm font-medium text-muted-foreground">Próximo Vencimiento</span>
+                        <span className="text-xs font-bold text-white/50 uppercase tracking-wider">Próximo Vencimiento</span>
                         {overdueBills.length > 0 ? (
                             <>
-                                <span className="text-xl font-bold text-destructive mt-1">
+                                <span className="text-xl font-bold text-red-400 mt-2">
                                     ¡Vencido!
                                 </span>
-                                <span className="text-sm text-destructive truncate">
-                                    {overdueBills[0].service.name} ({new Date(overdueBills[0].dueDate).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })})
+                                <span className="text-sm text-red-300 truncate mt-1">
+                                    {overdueBills[0].service.name} ({formatDate(overdueBills[0].dueDate, { day: 'numeric', month: 'short' })})
                                 </span>
                             </>
                         ) : pendingBills.length > 0 ? (
                             <>
-                                <span className="text-xl font-bold text-foreground mt-1">
-                                    {new Date(pendingBills[0].dueDate).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                                <span className="text-xl font-bold text-white mt-2">
+                                    {formatDate(pendingBills[0].dueDate, { day: 'numeric', month: 'short' })}
                                 </span>
-                                <span className="text-sm text-foreground truncate">{pendingBills[0].service.name}</span>
+                                <span className="text-sm text-white/60 truncate mt-1">{pendingBills[0].service.name}</span>
                             </>
                         ) : (
-                            <span className="text-lg text-muted-foreground mt-2">¡Todo al día! 🎉</span>
+                            <span className="text-lg text-white/60 mt-2">¡Todo al día! 🎉</span>
                         )}
                     </div>
-                </Card>
+                </div>
             </div>
 
             {/* Header with Add Button */}
             <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-foreground">Boletas del Mes</h2>
-                <Button onClick={() => setIsAddModalOpen(true)} icon={<span>+</span>} size="sm">
+                <h2 className="text-lg font-bold text-white/80">Boletas del Mes</h2>
+                <Button onClick={() => setIsAddModalOpen(true)} variant="primary" size="sm" icon={<span className="material-symbols-outlined text-[18px]">add</span>}>
                     Nueva Boleta
                 </Button>
             </div>
@@ -121,16 +123,17 @@ export default function BillsManager({ bills, overdueBills = [], services, onRef
             {/* Bills List */}
             <div className="grid grid-cols-1 gap-4">
                 {overdueBills.length === 0 && pendingBills.length === 0 && paidBills.length === 0 && skippedBills.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground bg-muted/30 rounded-xl border border-dashed border-border">
+                    <div className="glass-card p-8 text-center text-white/50">
                         No hay boletas para este mes ni deudas anteriores.
                     </div>
                 ) : (
                     <>
                         {/* Overdue Bills Section */}
                         {overdueBills.length > 0 && (
-                            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 mb-2">
-                                <h3 className="text-sm font-bold text-destructive mb-3 flex items-center gap-2">
-                                    ⚠️ Boletas Vencidas (Meses Anteriores)
+                            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 mb-2">
+                                <h3 className="text-sm font-bold text-red-400 mb-3 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-[18px]">warning</span>
+                                    Boletas Vencidas (Meses Anteriores)
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {overdueBills.map(bill => (
@@ -149,7 +152,7 @@ export default function BillsManager({ bills, overdueBills = [], services, onRef
                         {/* Pending Bills */}
                         {pendingBills.length > 0 && (
                             <>
-                                <h3 className="text-sm font-medium text-muted-foreground mt-2">Pendientes del Mes</h3>
+                                <h3 className="text-sm font-medium text-white/50 mt-2">Pendientes del Mes</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {pendingBills.map(bill => (
                                         <BillCard
@@ -167,7 +170,7 @@ export default function BillsManager({ bills, overdueBills = [], services, onRef
                         {/* Paid Bills */}
                         {paidBills.length > 0 && (
                             <>
-                                <h3 className="text-sm font-medium text-muted-foreground mt-6">Pagadas</h3>
+                                <h3 className="text-sm font-medium text-white/50 mt-6">Pagadas</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75">
                                     {paidBills.map(bill => (
                                         <BillCard
@@ -184,7 +187,7 @@ export default function BillsManager({ bills, overdueBills = [], services, onRef
                         {/* Skipped Bills */}
                         {skippedBills.length > 0 && (
                             <>
-                                <h3 className="text-sm font-medium text-muted-foreground mt-6">Saltadas</h3>
+                                <h3 className="text-sm font-medium text-white/50 mt-6">Saltadas</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-50">
                                     {skippedBills.map(bill => (
                                         <BillCard
@@ -247,12 +250,13 @@ export default function BillsManager({ bills, overdueBills = [], services, onRef
                 isOpen={!!deletingBill}
                 onClose={() => setDeletingBill(null)}
                 title="Eliminar Boleta"
+                size="sm"
             >
                 <div className="space-y-4">
-                    <p className="text-foreground">
-                        ¿Estás seguro de que querés eliminar la boleta de <b>{deletingBill?.service?.name}</b>?
+                    <p className="text-white/80">
+                        ¿Estás seguro de que querés eliminar la boleta de <b className="text-white">{deletingBill?.service?.name}</b>?
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-white/50">
                         Período: {deletingBill && new Date(deletingBill.year, deletingBill.month - 1).toLocaleString('es-AR', { month: 'long', year: 'numeric' })}
                     </p>
                     <div className="flex justify-end gap-3 pt-4">
@@ -281,85 +285,99 @@ interface BillCardProps {
 function BillCard({ bill, onPay, onEdit, onDelete, isPaid = false, isSkipped = false }: BillCardProps) {
     const isOverdue = !isPaid && !isSkipped && new Date(bill.dueDate) < new Date();
     const dueDate = new Date(bill.dueDate);
+    const icon = getServiceIcon(bill.service.name, bill.service.category?.icon);
+    const isEmoji = icon && !/^[a-z0-9_]+$/.test(icon);
 
     return (
-        <Card className={`relative overflow-hidden transition-all hover:shadow-md group ${isPaid ? 'bg-muted/50' :
-            isSkipped ? 'bg-muted/30' :
-                'bg-card'
+        <div className={`glass-card relative overflow-hidden transition-all hover:bg-white/20 group ${isPaid ? 'opacity-75' : isSkipped ? 'opacity-60' : ''
             }`}>
             {isOverdue && (
-                <div className="absolute top-0 right-0 bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
-                    VENCIDO
+                <div className="absolute top-0 right-0 bg-red-500/20 text-red-300 text-[10px] font-bold px-3 py-1 rounded-bl-xl z-10 flex items-center gap-1 border-l border-b border-red-500/30">
+                    <span className="material-symbols-outlined text-[10px]">warning</span> VENCIDO
                 </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {onEdit && (
-                    <button
-                        onClick={onEdit}
-                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                        title="Editar"
-                    >
-                        ✏️
-                    </button>
-                )}
-                {onDelete && (
-                    <button
-                        onClick={onDelete}
-                        className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                        title="Eliminar"
-                    >
-                        🗑️
-                    </button>
-                )}
-            </div>
-
-            <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-xl">
-                        {bill.service.category?.icon || '📄'}
+            <div className="flex flex-col h-full relative z-0 p-1">
+                {/* Header */}
+                <div className="flex items-start gap-4 mb-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${isPaid ? 'bg-emerald-500/20 text-emerald-400' :
+                            isSkipped ? 'bg-white/10 text-white/40' :
+                                'bg-blue-500/20 text-blue-400'
+                        }`}>
+                        {isEmoji ? (
+                            <span>{icon}</span>
+                        ) : (
+                            <span className="material-symbols-outlined">{icon}</span>
+                        )}
                     </div>
-                    <div>
-                        <h3 className="font-semibold text-foreground">{bill.service.name}</h3>
-                        <p className="text-xs text-muted-foreground">
-                            Vence: {dueDate.toLocaleDateString('es-AR')}
+                    <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-white leading-tight truncate pr-6 text-base">{bill.service.name}</h3>
+                        <p className={`text-xs font-medium mt-1 ${isOverdue ? 'text-red-400' : 'text-white/50'}`}>
+                            {isPaid ? 'Pagado el ' + formatDate(new Date(), { day: 'numeric', month: 'short' }) :
+                                isSkipped ? 'Saltado' :
+                                    `Vence el ${formatDate(dueDate)}`}
                         </p>
                     </div>
                 </div>
-            </div>
 
-            <div className="flex justify-between items-end">
-                <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">
-                        {isPaid ? 'Monto pagado' : isSkipped ? 'Monto saltado' : 'Monto estimado'}
-                    </p>
-                    <p className="text-lg font-bold text-foreground">
-                        ${Number(bill.amount).toLocaleString('es-AR')}
+                {/* Amount */}
+                <div className="mt-auto mb-4">
+                    <p className="text-[10px] text-white/40 font-bold uppercase tracking-wider mb-0.5">Total</p>
+                    <p className={`text-3xl font-black tracking-tight ${isPaid ? 'text-emerald-400' :
+                            isSkipped ? 'text-white/40 line-through' :
+                                'text-white'
+                        }`}>
+                        <span className="text-lg align-top font-bold mr-0.5">$</span>
+                        {Number(bill.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </p>
                 </div>
-                {!isPaid && !isSkipped && onPay && (
-                    <Button size="sm" onClick={onPay} variant={isOverdue ? 'danger' : 'primary'}>
-                        Pagar
-                    </Button>
-                )}
-                {isPaid && (
-                    <span className="text-success font-medium text-sm flex items-center gap-1">
-                        ✓ Pagado
-                    </span>
-                )}
-                {isSkipped && (
-                    <span className="text-muted-foreground font-medium text-sm flex items-center gap-1">
-                        ⊘ Saltado
-                    </span>
-                )}
-            </div>
 
-            {bill.service.renewalDate && !isPaid && !isSkipped && (
-                <div className="mt-3 pt-2 border-t border-border text-xs text-amber-600 flex items-center gap-1">
-                    <span>⚠️ Promo vence: {new Date(bill.service.renewalDate).toLocaleDateString('es-AR')}</span>
+                {/* Actions Footer */}
+                <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                    {/* Promo Warning */}
+                    <div className="flex-1 min-w-0 mr-2">
+                        {bill.service.renewalDate && !isPaid && !isSkipped && (
+                            <div className="flex items-center gap-1.5 text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg w-fit max-w-full border border-amber-500/20">
+                                <span className="material-symbols-outlined text-[14px]">stars</span>
+                                <span className="text-[10px] font-bold truncate">
+                                    Promo vence: {formatDate(bill.service.renewalDate)}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="flex items-center gap-2">
+                        {!isPaid && !isSkipped && onPay && (
+                            <button
+                                onClick={onPay}
+                                className={`
+                                    px-5 py-2 rounded-xl text-sm font-bold text-white shadow-lg transition-all hover:scale-105 active:scale-95
+                                    ${isOverdue
+                                        ? 'bg-gradient-to-r from-red-500 to-red-600 shadow-red-500/30'
+                                        : 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-blue-500/30'}
+                                `}
+                            >
+                                Pagar
+                            </button>
+                        )}
+
+                        {/* Edit/Delete Overlay Actions - Visible on Hover */}
+                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all glass-card p-1">
+                            {onEdit && !isPaid && (
+                                <button onClick={onEdit} className="p-1.5 hover:bg-white/10 rounded-lg text-white/40 hover:text-blue-400 transition-colors">
+                                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                                </button>
+                            )}
+                            {onDelete && (
+                                <button onClick={onDelete} className="p-1.5 hover:bg-red-500/10 rounded-lg text-white/40 hover:text-red-400 transition-colors">
+                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
-            )}
-        </Card>
+            </div>
+        </div>
     );
 }

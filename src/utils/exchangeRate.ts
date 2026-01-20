@@ -1,6 +1,6 @@
 // lib/exchangeRate.ts
 import { Currency } from '@prisma/client';
-import { prisma } from '../lib/db/prisma';
+import { prisma } from '../lib/prisma';
 
 /**
  * Servicio para manejar tipos de cambio entre monedas
@@ -145,40 +145,9 @@ export async function fetchExchangeRatesFromAPI(): Promise<ExchangeRateData[]> {
   // - Para ARS/USD: https://dolarapi.com/v1/dolares/blue
   // - Para crypto: CoinGecko API
 
-  const mockRates: ExchangeRateData[] = [
-    {
-      fromCurrency: Currency.USD,
-      toCurrency: Currency.ARS,
-      rate: 1350, // Dólar blue aproximado
-      timestamp: new Date(),
-    },
-    {
-      fromCurrency: Currency.ARS,
-      toCurrency: Currency.USD,
-      rate: 1 / 1350,
-      timestamp: new Date(),
-    },
-    {
-      fromCurrency: Currency.BTC,
-      toCurrency: Currency.USD,
-      rate: 95000, // BTC en USD aproximado
-      timestamp: new Date(),
-    },
-    {
-      fromCurrency: Currency.USDT,
-      toCurrency: Currency.USD,
-      rate: 1,
-      timestamp: new Date(),
-    },
-    {
-      fromCurrency: Currency.USDC,
-      toCurrency: Currency.USD,
-      rate: 1,
-      timestamp: new Date(),
-    },
-  ];
-
-  return mockRates;
+  // MOCK: Exchange rates removed as per user request. 
+  // Manual entry will be required for conversions.
+  return [];
 }
 
 /**

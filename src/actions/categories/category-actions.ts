@@ -1,36 +1,16 @@
 'use server'
 
-import { prisma } from "@/src/lib/db/prisma";
+import { prisma } from "@/src/lib/prisma";
+import { requireUser } from "@/src/lib/auth";
 import { revalidatePath } from "next/cache";
 import { CategoryType } from "@prisma/client";
-
-/**
- * Obtiene o crea el usuario demo
- */
-async function getDemoUser() {
-    const userEmail = 'demo@financetracker.com';
-    let user = await prisma.user.findUnique({
-        where: { email: userEmail }
-    });
-
-    if (!user) {
-        user = await prisma.user.create({
-            data: {
-                email: userEmail,
-                name: 'Usuario Demo',
-            }
-        });
-    }
-
-    return user;
-}
 
 /**
  * Obtiene todas las categorías del usuario
  */
 export async function getCategories(type?: 'INCOME' | 'EXPENSE') {
     try {
-        const user = await getDemoUser();
+        const user = await requireUser();
 
         const categories = await prisma.category.findMany({
             where: {
@@ -58,7 +38,7 @@ export async function getCategories(type?: 'INCOME' | 'EXPENSE') {
  */
 export async function createCategory(formData: FormData): Promise<{ success: boolean; error?: string }> {
     try {
-        const user = await getDemoUser();
+        const user = await requireUser();
 
         const name = formData.get('name') as string;
         const icon = formData.get('icon') as string;
@@ -94,8 +74,9 @@ export async function createCategory(formData: FormData): Promise<{ success: boo
             },
         });
 
+
         try {
-            revalidatePath('/categories');
+            revalidatePath('/transactions');
         } catch (e) {
             // Ignore revalidate errors
         }
@@ -115,7 +96,7 @@ export async function createCategory(formData: FormData): Promise<{ success: boo
  */
 export async function updateCategory(categoryId: string, formData: FormData): Promise<{ success: boolean; error?: string }> {
     try {
-        const user = await getDemoUser();
+        const user = await requireUser();
 
         const name = formData.get('name') as string;
         const icon = formData.get('icon') as string;
@@ -169,8 +150,9 @@ export async function updateCategory(categoryId: string, formData: FormData): Pr
             },
         });
 
+
         try {
-            revalidatePath('/categories');
+            revalidatePath('/transactions');
         } catch (e) {
             // Ignore revalidate errors
         }
@@ -190,7 +172,7 @@ export async function updateCategory(categoryId: string, formData: FormData): Pr
  */
 export async function deleteCategory(categoryId: string): Promise<{ success: boolean; error?: string }> {
     try {
-        const user = await getDemoUser();
+        const user = await requireUser();
 
         // Verificar que la categoría exista y pertenezca al usuario
         const category = await prisma.category.findUnique({
@@ -223,8 +205,9 @@ export async function deleteCategory(categoryId: string): Promise<{ success: boo
             where: { id: categoryId },
         });
 
+
         try {
-            revalidatePath('/categories');
+            revalidatePath('/transactions');
         } catch (e) {
             // Ignore revalidate errors
         }

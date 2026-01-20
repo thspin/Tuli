@@ -1,76 +1,41 @@
 'use server'
 
-import { prisma } from "@/src/lib/db/prisma";
+import { prisma } from "@/src/lib/prisma";
+import { requireUser } from "@/src/lib/auth";
 import { revalidatePath } from "next/cache";
 import { Service, ServiceBill, BillStatus, ServiceBenefitType, TransactionType, ProductType } from "@prisma/client";
-import { v4 as uuidv4 } from 'uuid';
+import { z } from 'zod';
+import { serializeService, serializeServiceBill } from "@/src/utils/serializers";
 
-// --- HELPER: Deep Serialization to eliminate ALL Decimal issues ---
-/**
- * Recursively converts Prisma Decimal objects to Numbers throughout the entire object tree.
- * This prevents "Decimal objects are not supported" errors when passing data to Client Components.
- */
-function deepSerialize(obj: any): any {
-    if (obj === null || obj === undefined) {
-        return obj;
-    }
+// --- Zod Schemas ---
 
-    // Handle Decimal objects (check constructor name and duck typing)
-    if (
-        obj.constructor?.name === 'Decimal' ||
-        (typeof obj === 'object' && 'd' in obj && 'e' in obj && 's' in obj)
-    ) {
-        return Number(obj);
-    }
+const serviceSchema = z.object({
+    name: z.string().min(1, "El nombre es requerido"),
+    categoryId: z.string().min(1, "La categoría es requerida"),
+    defaultDueDay: z.coerce.number().int().min(1).max(31).optional().nullable(),
+    defaultAmount: z.coerce.number().positive().optional().nullable(),
+    renewalDate: z.string().optional().nullable().transform(val => val ? new Date(val) : null),
+    renewalNote: z.string().optional().nullable(),
+});
 
-    // Handle Date objects
-    if (obj instanceof Date) {
-        return obj;
-    }
+const billSchema = z.object({
+    serviceId: z.string().min(1),
+    amount: z.coerce.number().positive(),
+    dueDate: z.string().transform(val => new Date(`${val}T12:00:00`)),
+});
 
-    // Handle Arrays
-    if (Array.isArray(obj)) {
-        return obj.map(item => deepSerialize(item));
-    }
-
-    // Handle plain objects
-    if (typeof obj === 'object') {
-        const serialized: any = {};
-        for (const key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                serialized[key] = deepSerialize(obj[key]);
-            }
-        }
-        return serialized;
-    }
-
-    // Primitive values (string, number, boolean)
-    return obj;
-}
-
-// --- HELPER: Get Demo User ---
-async function getDemoUser() {
-    const userEmail = 'demo@financetracker.com';
-    let user = await prisma.user.findUnique({
-        where: { email: userEmail }
-    });
-
-    if (!user) {
-        user = await prisma.user.create({
-            data: {
-                email: userEmail,
-                name: 'Usuario Demo',
-            }
-        });
-    }
-    return user;
-}
+const payBillSchema = z.object({
+    billId: z.string().min(1),
+    productId: z.string().min(1),
+    date: z.string().transform(val => new Date(`${val}T12:00:00`)),
+    amount: z.coerce.number().positive(),
+});
 
 // --- SERVICES CRUD ---
 
 export async function getServices() {
     try {
-        const user = await getDemoUser();
+        const user = await requireUser();
         const services = await prisma.service.findMany({
             where: { userId: user.id },
             include: {
@@ -83,7 +48,7 @@ export async function getServices() {
             },
             orderBy: { name: 'asc' }
         });
-        return { success: true, data: deepSerialize(services) };
+        return { success: true, data: services.map(serializeService) };
     } catch (error) {
         return { success: false, error: 'Error al obtener servicios' };
     }
@@ -91,29 +56,19 @@ export async function getServices() {
 
 export async function createService(formData: FormData) {
     try {
-        const user = await getDemoUser();
-        const name = formData.get('name') as string;
-        const categoryId = formData.get('categoryId') as string;
-        // Optional Due Day (null = Manual Service)
-        const defaultDueDay = formData.get('defaultDueDay') ? parseInt(formData.get('defaultDueDay') as string) : null;
-        // Default to 0 if not provided (UI field removed)
-        const defaultAmount = formData.get('defaultAmount') ? parseFloat(formData.get('defaultAmount') as string) : 0;
-        const renewalDateStr = formData.get('renewalDate') as string;
-        const renewalNote = formData.get('renewalNote') as string;
+        const rawData = Object.fromEntries(formData.entries());
 
+        // Manejo de campos vacíos que deben ser null
+        if (rawData.defaultDueDay === '') delete rawData.defaultDueDay;
+        if (rawData.defaultAmount === '') delete rawData.defaultAmount;
+        if (rawData.renewalDate === '') delete rawData.renewalDate;
 
-        if (!name || !categoryId) {
-            throw new Error('Faltan campos obligatorios');
-        }
+        const validated = serviceSchema.parse(rawData);
+        const user = await requireUser();
 
         await prisma.service.create({
             data: {
-                name,
-                categoryId,
-                defaultDueDay,
-                defaultAmount,
-                renewalDate: renewalDateStr ? new Date(renewalDateStr) : null,
-                renewalNote,
+                ...validated,
                 userId: user.id
             }
         });
@@ -121,6 +76,9 @@ export async function createService(formData: FormData) {
         revalidatePath('/services');
         return { success: true };
     } catch (error) {
+        if (error instanceof z.ZodError) {
+            return { success: false, error: error.issues[0].message };
+        }
         return { success: false, error: error instanceof Error ? error.message : 'Error al crear servicio' };
     }
 }
@@ -140,42 +98,19 @@ export async function updateService(serviceId: string, data: Partial<Service>) {
 
 export async function updateServiceFromForm(serviceId: string, formData: FormData) {
     try {
-        const name = formData.get('name') as string;
-        const categoryId = formData.get('categoryId') as string;
-        // Keep existing if not in form, or default? for update we might not want to overwrite if not present?
-        // Actually, if it's missing from form it might be intended to be unchanged OR undefined. 
-        // But since we are removing it from UI completely, we should probably NOT try to update it if it's not in formData, 
-        // OR we just ignore it.
-        // However, Prisma 'update' only updates provided fields.
-        // Wait, 'updateServiceFromForm' extracts values.
-        // If I remove the input, formData.get() returns null.
-        // I need to fetch the existing service to keep previous value? 
-        // OR better: Just don't include it in the `data` object if it's null/NaN.
+        const rawData = Object.fromEntries(formData.entries());
+        // Limpiar campos vacíos
+        if (rawData.defaultDueDay === '') delete rawData.defaultDueDay;
+        if (rawData.defaultAmount === '') delete rawData.defaultAmount;
+        if (rawData.renewalDate === '') delete rawData.renewalDate;
 
-        let defaultDueDay: number | undefined;
-        if (formData.get('defaultDueDay')) {
-            defaultDueDay = parseInt(formData.get('defaultDueDay') as string);
-        }
-
-        let defaultAmount: number | null | undefined;
-        if (formData.has('defaultAmount')) { // Checking has() in case they want to clear it?
-            // If field is removed, it won't be 'has'.
-            const val = formData.get('defaultAmount');
-            defaultAmount = val ? parseFloat(val as string) : null;
-        }
-        const renewalDateStr = formData.get('renewalDate') as string;
-        const renewalNote = formData.get('renewalNote') as string;
+        const validated = serviceSchema.parse(rawData);
         const active = formData.get('active') !== 'false';
 
         await prisma.service.update({
             where: { id: serviceId },
             data: {
-                name,
-                categoryId,
-                ...(defaultDueDay !== undefined && { defaultDueDay }),
-                ...(defaultAmount !== undefined && { defaultAmount }),
-                renewalDate: renewalDateStr ? new Date(renewalDateStr) : null,
-                renewalNote: renewalNote || null,
+                ...validated,
                 active
             }
         });
@@ -183,6 +118,9 @@ export async function updateServiceFromForm(serviceId: string, formData: FormDat
         revalidatePath('/services');
         return { success: true };
     } catch (error) {
+        if (error instanceof z.ZodError) {
+            return { success: false, error: error.issues[0].message };
+        }
         return { success: false, error: error instanceof Error ? error.message : 'Error al actualizar servicio' };
     }
 }
@@ -204,7 +142,7 @@ export async function deleteService(serviceId: string) {
 
 export async function getMonthlyBills(month: number, year: number) {
     try {
-        const user = await getDemoUser();
+        const user = await requireUser();
 
         // 1. Get existing bills
         const existingBills = await prisma.serviceBill.findMany({
@@ -235,25 +173,14 @@ export async function getMonthlyBills(month: number, year: number) {
         const existingServiceIds = new Set(existingBills.map(b => b.serviceId));
         const missingServices = autoServices.filter(s => !existingServiceIds.has(s.id));
 
-        // NOTE: We removed the early return here because we ALWAYS need to fetch overdue bills
-        // even if there are no missing services for the current month
-
         // 4. Generate missing bills
         const newBillsData = missingServices.map(service => {
             if (!service.defaultDueDay) return null; // Should be filtered out but for safety
 
-            // Calculate due date: Year/Month/DefaultDay
-            // Handle invalid days (e.g., Feb 30)
-            const safeDay = Math.min(service.defaultDueDay, new Date(year, month, 0).getDate()); // month is 1-12, Date uses 1-12 for day 0? No.
-            // Date(year, monthIndex, 0) gives last day of previous month.
-            // We need Date(year, month, 0) where month is 1-based?
-            // JS Date monthIndex is 0-11.
-            // So for "March" (3), we want new Date(year, 3, 0) -> Last day of March? No, Last day of Feb is new Date(year, 2, 0).
-            // Last day of Target Month (monthIndex = month - 1)
+            // Calculate due date
             const daysInMonth = new Date(year, month, 0).getDate();
             const dueDay = Math.min(service.defaultDueDay, daysInMonth);
-
-            const dueDate = new Date(year, month - 1, dueDay);
+            const dueDate = new Date(year, month - 1, dueDay, 12, 0, 0);
 
             return {
                 serviceId: service.id,
@@ -264,7 +191,7 @@ export async function getMonthlyBills(month: number, year: number) {
                 status: BillStatus.PENDING,
                 userId: user.id
             };
-        }).filter(b => b !== null) as any[]; // Type assertion for filter
+        }).filter(b => b !== null) as any[];
 
         if (newBillsData.length > 0) {
             await prisma.serviceBill.createMany({
@@ -289,7 +216,6 @@ export async function getMonthlyBills(month: number, year: number) {
         });
 
         // 6. Fetch Overdue Bills (Past months, Status PENDING)
-        // Logic: (Year < CurrentYear) OR (Year == CurrentYear AND Month < CurrentMonth)
         const overdueBills = await prisma.serviceBill.findMany({
             where: {
                 userId: user.id,
@@ -310,11 +236,11 @@ export async function getMonthlyBills(month: number, year: number) {
 
         const response = {
             success: true,
-            data: allBills,
-            overdue: overdueBills
+            data: allBills.map(serializeServiceBill),
+            overdue: overdueBills.map(serializeServiceBill)
         };
 
-        return deepSerialize(response);
+        return response;
 
     } catch (error) {
         console.error(error);
@@ -337,28 +263,13 @@ export async function updateBill(billId: string, data: Partial<ServiceBill>) {
 
 export async function createBill(formData: FormData) {
     try {
-        const user = await getDemoUser();
-        const serviceId = formData.get('serviceId') as string;
-        const amount = parseFloat(formData.get('amount') as string);
-        const dueDateStr = formData.get('dueDate') as string;
+        const user = await requireUser();
+        const rawData = Object.fromEntries(formData.entries());
+        const validated = billSchema.parse(rawData);
 
-        // Logic change: Derive month/year from Due Date to ensure consistency.
-        // The user might be in "December view" but pick a "January" date.
-        const dueDate = new Date(dueDateStr);
-        // Correct for timezone offset if needed? Usually valid dateStr is enough.
-        // Assuming dueDateStr is YYYY-MM-DD
-
+        const { serviceId, amount, dueDate } = validated;
         const month = dueDate.getMonth() + 1;
         const year = dueDate.getFullYear();
-
-        /* 
-        const month = parseInt(formData.get('month') as string);
-        const year = parseInt(formData.get('year') as string);
-        */
-
-        if (!serviceId || isNaN(amount) || !dueDateStr) {
-            throw new Error('Datos incompletos para crear la boleta');
-        }
 
         // Check if bill already exists for this service/month/year
         const existingBill = await prisma.serviceBill.findUnique({
@@ -390,6 +301,9 @@ export async function createBill(formData: FormData) {
         revalidatePath('/services');
         return { success: true };
     } catch (error) {
+        if (error instanceof z.ZodError) {
+            return { success: false, error: error.issues[0].message };
+        }
         return { success: false, error: error instanceof Error ? error.message : 'Error al crear boleta' };
     }
 }
@@ -406,7 +320,7 @@ export async function updateBillFromForm(billId: string, formData: FormData) {
             updateData.amount = amount;
         }
         if (dueDateStr) {
-            updateData.dueDate = new Date(dueDateStr);
+            updateData.dueDate = new Date(`${dueDateStr}T12:00:00`);
         }
         if (status) {
             updateData.status = status;
@@ -434,9 +348,6 @@ export async function deleteBill(billId: string) {
         if (!bill) return { success: false, error: 'Boleta no encontrada' };
 
         // If service is active, we can't truly "delete" the bill because getMonthlyBills will regenerate it.
-        // Instead, we mark it as SKIPPED to indicate no payment is needed this month.
-        // If service is active AND has a defaultDueDay, we mark as SKIPPED to prevent regen.
-        // If it's a manual service (no due day), we can safely hard delete.
         if (bill.service.active && bill.service.defaultDueDay !== null) {
             await prisma.serviceBill.update({
                 where: { id: billId },
@@ -489,17 +400,11 @@ export async function deletePaymentRule(ruleId: string) {
 
 export async function payServiceBill(formData: FormData) {
     try {
-        const billId = formData.get('billId') as string;
-        const productId = formData.get('productId') as string; // Payment Method
-        const dateStr = formData.get('date') as string;
-        const amount = parseFloat(formData.get('amount') as string); // Confirmed amount by user
+        const rawData = Object.fromEntries(formData.entries());
+        const validated = payBillSchema.parse(rawData);
+        const { billId, productId, date, amount } = validated;
 
-        if (!billId || !productId || !dateStr || isNaN(amount)) {
-            throw new Error('Datos incompletos para el pago');
-        }
-
-        const user = await getDemoUser();
-        const date = new Date(dateStr);
+        const user = await requireUser();
 
         // Get Bill
         const bill = await prisma.serviceBill.findUnique({
@@ -516,7 +421,6 @@ export async function payServiceBill(formData: FormData) {
         });
         if (!product) throw new Error('Producto financiero no encontrado');
         if (Number(product.balance) < amount && product.type !== ProductType.CREDIT_CARD) {
-            // Simple check for Debit/Cash
             throw new Error('Saldo insuficiente');
         }
 
@@ -536,7 +440,6 @@ export async function payServiceBill(formData: FormData) {
         if (rule) {
             if (rule.benefitType === ServiceBenefitType.DISCOUNT) {
                 // Discount: Reduce the expense amount
-                // value is percentage (e.g., 10)
                 const discount = amount * (Number(rule.value) / 100);
                 finalExpenseAmount = amount - discount;
             } else if (rule.benefitType === ServiceBenefitType.CASHBACK) {
@@ -572,17 +475,13 @@ export async function payServiceBill(formData: FormData) {
             });
 
             // 3. Update Product Balance (Expense)
-            // Logic copied/simplified from transaction-actions.ts
-            // For MVP, simplified balance update.
-
             let balanceChange = -finalExpenseAmount;
             let limitUpdate = {};
 
             if (product.type === ProductType.CREDIT_CARD) {
-                // Credit Card: Balance decreases (more debt), Limit decreases
                 limitUpdate = {
                     limitSinglePayment: { increment: balanceChange },
-                    limitInstallments: { increment: balanceChange } // Assuming 1 payment affects both or logic
+                    limitInstallments: { increment: balanceChange }
                 };
                 if (product.unifiedLimit) {
                     limitUpdate = {
@@ -602,41 +501,7 @@ export async function payServiceBill(formData: FormData) {
 
             // 4. Handle Cashback (Optional Income)
             if (cashbackAmount > 0) {
-                await tx.transaction.create({
-                    data: {
-                        amount: cashbackAmount,
-                        date: date,
-                        description: `Cashback: ${bill.service.name}`,
-                        type: TransactionType.INCOME,
-                        // Where does cashback go? Usually to the same card/account.
-                        toProductId: productId,
-                        // fromProductId is required by schema? No, toProductId is enough for Income?
-                        // Schema: fromProductId is NON-NULLABLE. 
-                        // For Income, 'fromProductId' usually implies Source? 
-                        // Let's check schema... `fromProductId String`.
-                        // In `transaction-actions`, how is Income handled?
-                        // It's not implemented there!
-                        // Assuming Income needs a 'from' product is weird unless it's a transfer.
-                        // If it's external income, maybe we need a "Cash" or "External" product?
-                        // Let's look at schema `fromProductId` relation.
-                        // `fromProduct FinancialProduct`.
-                        // We need a dummy product or allow null? Schema says NOT NULL.
-                        // Workaround: Use the same product as source/dest for cashback? 
-                        // Or create a System Product?
-                        // Let's skip Creating Transaction for Cashback to avoid breaking schema constraints
-                        // and just update the balance directly with a note?
-                        // Or better: Just update the balance of the product adding the cashback.
-                        // But we want a record. 
-                        // Let's use the same product as `fromProductId` for now, effectively a self-transfer?
-                        // No, Income type needs logic.
-                        // Let's just log it in the console for now, or skip to keep safe.
-                        // Re-reading user req: "computarse y contarse".
-                        // I'll Apply the cashback to the balance directly (Refund).
-                        userId: user.id,
-                        fromProductId: productId, // Self-reference for now to satisfy FK
-                    }
-                });
-
+                // For now, simple balance adjustment (refund approach)
                 await tx.financialProduct.update({
                     where: { id: productId },
                     data: {
@@ -651,6 +516,49 @@ export async function payServiceBill(formData: FormData) {
 
     } catch (error) {
         console.error(error);
+        if (error instanceof z.ZodError) {
+            return { success: false, error: error.issues[0].message };
+        }
         return { success: false, error: error instanceof Error ? error.message : 'Error al pagar' };
+    }
+}
+
+export async function linkBillToTransaction(billId: string, transactionId: string) {
+    try {
+        const user = await requireUser();
+
+        // Check ownership
+        const transaction = await prisma.transaction.findUnique({ where: { id: transactionId } });
+        if (!transaction || transaction.userId !== user.id) throw new Error("Transacción inválida");
+
+        const bill = await prisma.serviceBill.findUnique({ where: { id: billId }, include: { service: true } });
+        if (!bill || bill.userId !== user.id) throw new Error("Boleta inválida");
+
+        await prisma.$transaction(async (tx) => {
+            // Link Bill
+            await tx.serviceBill.update({
+                where: { id: billId },
+                data: {
+                    status: BillStatus.PAID,
+                    transactionId: transactionId,
+                    amount: transaction.amount // Update bill amount to match linked transaction
+                }
+            });
+
+            // Update Transaction Category if needed to match Service
+            if (bill.service.categoryId) {
+                await tx.transaction.update({
+                    where: { id: transactionId },
+                    data: {
+                        categoryId: bill.service.categoryId
+                    }
+                });
+            }
+        });
+
+        revalidatePath('/services');
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: 'Error al vincular pago: ' + (error instanceof Error ? error.message : 'Desconocido') };
     }
 }

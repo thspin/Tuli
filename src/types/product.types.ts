@@ -18,6 +18,7 @@ export interface Product {
     linkedProductId?: string | null;
     lastFourDigits?: string | null;
     provider?: CardProvider | null;
+    expirationDate?: Date | string | null;
 }
 
 export type CardProvider = 'VISA' | 'MASTERCARD' | 'AMEX' | 'OTHER';
@@ -44,6 +45,7 @@ export interface Institution {
     id: string;
     name: string;
     type: 'BANK' | 'WALLET';
+    shareSummary?: boolean;
 }
 
 export interface InstitutionWithProducts extends Institution {

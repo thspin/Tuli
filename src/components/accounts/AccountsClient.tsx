@@ -2,20 +2,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link'
+import AddActionMenu from './AddActionMenu';
+import AddTransferButton from './AddTransferButton';
 import AddInstitutionButton from './AddInstitutionButton';
-import AddProductButton from './AddProductButton';
-import ThemeSwitcher from '../ui/ThemeSwitcher';
-import InstitutionCarousel from './InstitutionCarousel';
+import InstitutionListItem from './InstitutionListItem';
 import ProductCard from './ProductCard';
 import ProductDetailsPanel from './ProductDetailsPanel';
+import CreditCardStack from './CreditCardStack';
+import AccountCarousel from './AccountCarousel';
+import UploadStatementButton from './UploadStatementButton';
+import { Card } from '@/src/components/ui';
 
-import { formatNumber } from '@/src/utils/validations';
 import {
     Product,
     InstitutionWithProducts,
-    DisplayCurrency,
-    Currency,
 } from '@/src/types';
 
 interface AccountsClientProps {
@@ -24,207 +24,191 @@ interface AccountsClientProps {
     usdToArsRate: number | null;
 }
 
-const formatCurrency = (amount: number, currency: DisplayCurrency) => {
-    const symbol = currency === 'ARS' ? '$' : 'US$';
-    const formatted = formatNumber(amount, 2);
-    return `${symbol} ${formatted}`;
-};
-
 export default function AccountsClient({ institutions, cashProducts, usdToArsRate }: AccountsClientProps) {
-    const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>('ARS');
     const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(
         institutions.length > 0 ? institutions[0].id : null
     );
-    const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-
-    const router = useRouter();
-
-    const convertAmount = (amount: number, fromCurrency: Currency): number => {
-        if (displayCurrency === 'ARS') {
-            if (fromCurrency === 'USD') {
-                return amount * (usdToArsRate || 1350);
-            }
-            return amount;
-        } else {
-            // displayCurrency === 'USD'
-            if (fromCurrency === 'ARS') {
-                return amount / (usdToArsRate || 1350);
-            }
-            return amount;
-        }
-    };
-
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const selectedInstitution = institutions.find(inst => inst.id === selectedInstitutionId);
-    const selectedProduct = selectedInstitution?.products.find(p => p.id === selectedProductId) ||
-        cashProducts.find(p => p.id === selectedProductId);
 
-    const handleProductClick = (productId: string) => {
-        setSelectedProductId(productId);
-    };
+    // Get all liquidity accounts for credit card payments
+    const allLiquidityAccounts = institutions.flatMap(inst =>
+        inst.products
+            .filter(p => ['SAVINGS_ACCOUNT', 'CHECKING_ACCOUNT'].includes(p.type))
+            .map(p => ({
+                id: p.id,
+                name: p.name,
+                balance: p.balance,
+                currency: p.currency,
+                type: p.type,
+                institutionId: inst.id
+            }))
+    );
 
-    const handleClosePanel = () => {
-        setSelectedProductId(null);
-    };
+    const totalBalance = selectedInstitution?.products.reduce((sum, product) => {
+        const balance = product.currency === 'ARS' ? Number(product.balance) : (product.currency === 'USD' && usdToArsRate ? Number(product.balance) * usdToArsRate : 0);
+        return sum + balance;
+    }, 0) || 0;
+
+    const balanceColorClass = totalBalance >= 0 ? 'text-white' : 'text-red-400';
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                {/* Header fijo */}
+        <div className="min-h-screen p-4 md:p-6">
+            <div className="max-w-7xl mx-auto">
+                {/* Header Section */}
                 <div className="mb-6">
-                    {/* Navigation */}
-                    <div className="mb-6 flex gap-3 justify-between items-center">
-                        <Link
-                            href="/"
-                            className="bg-card hover:bg-accent text-card-foreground px-4 py-2 rounded-xl font-medium transition-colors text-sm flex items-center gap-2 shadow-sm border border-border"
-                        >
-                            ← Inicio
-                        </Link>
-                        <ThemeSwitcher />
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-black">Finance OS</span>
+                        <span className="text-white/30">/</span>
+                        <span className="text-blue-300 text-[10px] uppercase tracking-[0.2em] font-black">Billetera</span>
                     </div>
-
-                    {/* Título y subtítulo */}
-                    <div className="mb-6">
-                        <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">Mis Cuentas</h1>
-                        <p className="text-muted-foreground text-sm md:text-base">Gestiona tus productos financieros</p>
-                    </div>
-
-                    {/* Toolbar */}
-                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                        {/* Currency Toggle */}
-                        {usdToArsRate && (
-                            <div className="flex items-center gap-2 bg-card px-4 py-2.5 rounded-xl shadow-sm border border-border">
-                                <span className="text-sm text-muted-foreground font-medium">Ver en:</span>
-                                <div className="flex gap-1 bg-muted p-1 rounded-lg">
-                                    <button
-                                        onClick={() => setDisplayCurrency('ARS')}
-                                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${displayCurrency === 'ARS'
-                                            ? 'bg-primary text-primary-foreground shadow-sm'
-                                            : 'text-muted-foreground hover:text-foreground'
-                                            }`}
-                                    >
-                                        ARS
-                                    </button>
-                                    <button
-                                        onClick={() => setDisplayCurrency('USD')}
-                                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${displayCurrency === 'USD'
-                                            ? 'bg-primary text-primary-foreground shadow-sm'
-                                            : 'text-muted-foreground hover:text-foreground'
-                                            }`}
-                                    >
-                                        USD
-                                    </button>
-                                </div>
-                                <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">
-                                    1 USD = ${formatNumber(usdToArsRate, 2)}
-                                </span>
-                            </div>
-                        )}
-
-                        {/* Action buttons */}
-                        <div className="flex gap-3 flex-wrap">
-                            <AddInstitutionButton />
-                            <AddProductButton institutions={institutions} />
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight glass-text">Billetera</h1>
+                            <p className="text-white/60 font-medium text-sm">Gestiona tu liquidez y activos financieros.</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <AddTransferButton
+                                institutions={institutions}
+                                cashProducts={cashProducts}
+                            />
+                            <AddActionMenu institutions={institutions} />
                         </div>
                     </div>
                 </div>
 
-                {/* Carrusel de Instituciones */}
-                {institutions.length > 0 && (
-                    <InstitutionCarousel
-                        institutions={institutions}
-                        selectedInstitutionId={selectedInstitutionId}
-                        onSelectInstitution={setSelectedInstitutionId}
-                    />
-                )}
+                {/* Main Content: Institutions List */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                {/* Área de Productos */}
-                <div className="mb-8">
-                    {/* Efectivo - siempre visible si hay */}
-                    {cashProducts.length > 0 && (
-                        <div className="mb-12">
-                            <div className="flex items-center gap-2 mb-6">
-                                <h2 className="text-xl md:text-2xl font-semibold text-foreground">💵 Efectivo</h2>
-                                <span className="text-sm text-muted-foreground">({cashProducts.length})</span>
+                    {/* Institutions List - Glass Card */}
+                    <div className="lg:col-span-4 glass-card p-6">
+                        <div className="flex items-center gap-3 mb-6 px-1">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
+                                <span className="material-symbols-outlined text-xl">account_balance</span>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {cashProducts.map((product) => (
-                                    <ProductCard
-                                        key={product.id}
-                                        product={product}
-                                        institutionName="Efectivo"
-                                        onClick={() => router.push(`/accounts/${product.id}`)}
-                                        isSelected={selectedProductId === product.id}
+                            <h2 className="text-lg font-bold text-white glass-text">Instituciones</h2>
+                        </div>
+
+                        {institutions.length > 0 ? (
+                            <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
+                                {institutions.map((institution) => (
+                                    <InstitutionListItem
+                                        key={institution.id}
+                                        institution={institution}
+                                        onClick={() => setSelectedInstitutionId(institution.id)}
+                                        isSelected={selectedInstitutionId === institution.id}
                                     />
                                 ))}
                             </div>
-                        </div>
-                    )}
-
-                    {/* Productos de la institución seleccionada */}
-                    {selectedInstitution && (
-                        <div>
-                            <div className="flex items-center gap-2 mb-6">
-                                <h2 className="text-xl md:text-2xl font-semibold text-foreground">
-                                    {selectedInstitution.type === 'BANK' ? '🏦' : '📱'} {selectedInstitution.name}
-                                </h2>
-                                <span className="text-sm text-muted-foreground">
-                                    ({selectedInstitution.products.length} {selectedInstitution.products.length === 1 ? 'producto' : 'productos'})
-                                </span>
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+                                <span className="material-symbols-outlined text-4xl text-white/30 mb-3">account_balance</span>
+                                <p className="text-white/70 font-medium text-sm">No hay instituciones</p>
+                                <p className="text-white/40 text-xs mt-1">Agrega tu primera institución</p>
                             </div>
+                        )}
+                    </div>
 
-                            {selectedInstitution.products.length > 0 ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {selectedInstitution.products.map((product) => (
-                                        <ProductCard
-                                            key={product.id}
-                                            product={product}
-                                            institutionName={selectedInstitution.name}
-                                            onClick={() => handleProductClick(product.id)}
-                                            isSelected={selectedProductId === product.id}
-                                        />
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-20 bg-card border-2 border-dashed border-border rounded-2xl">
-                                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                                        <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                        </svg>
+                    {/* Right Side: Account Details Panel - Glass Card */}
+                    <div className="lg:col-span-8">
+                        {selectedInstitution ? (
+                            <div className="glass-card p-6">
+                                {/* Institution Header */}
+                                <div className="mb-6 pb-6 border-b border-white/10">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h2 className="text-2xl font-bold text-white glass-text">
+                                            {selectedInstitution.name}
+                                        </h2>
+                                        <div className="flex items-center gap-2">
+                                            <UploadStatementButton institution={selectedInstitution} />
+                                            <AddInstitutionButton
+                                                mode="edit"
+                                                institution={selectedInstitution}
+                                                variant="default"
+                                            />
+                                        </div>
                                     </div>
-                                    <p className="text-muted-foreground text-lg mb-4">No hay productos en esta institución</p>
-                                    <AddProductButton institutions={institutions} />
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-white/60">Total balance:</span>
+                                        <span className={`text-xl font-bold ${balanceColorClass} glass-text`}>
+                                            $ {totalBalance.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    )}
 
-                    {/* Estado vacío total */}
+                                {/* Accounts Section */}
+                                <div className="mb-6">
+                                    {selectedInstitution.products.filter(p => !['CREDIT_CARD', 'DEBIT_CARD'].includes(p.type)).length > 0 ? (
+                                        <AccountCarousel
+                                            products={selectedInstitution.products
+                                                .filter(p => !['CREDIT_CARD', 'DEBIT_CARD'].includes(p.type))
+                                                .sort((a, b) => b.balance - a.balance)
+                                            }
+                                            institutionName={selectedInstitution.name}
+                                            onSelect={(product) => setSelectedProduct(product)}
+                                            selectedProductId={selectedProduct?.id}
+                                        />
+                                    ) : (
+                                        <div className="h-32 flex flex-col items-center justify-center text-center border border-dashed border-white/20 rounded-2xl bg-white/5">
+                                            <span className="material-symbols-outlined text-4xl text-white/20 mb-2">savings</span>
+                                            <p className="text-white/40 font-medium text-sm">No hay cuentas activas</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Cards Section */}
+                                {selectedInstitution.products.filter(p => ['CREDIT_CARD', 'DEBIT_CARD'].includes(p.type)).length > 0 && (
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-4 px-1">
+                                            <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest">TARJETAS</h3>
+                                        </div>
+                                        <CreditCardStack
+                                            products={selectedInstitution.products.filter(p => ['CREDIT_CARD', 'DEBIT_CARD'].includes(p.type))}
+                                            institutionName={selectedInstitution.name}
+                                            onSelect={(product) => setSelectedProduct(product)}
+                                            selectedProductId={selectedProduct?.id}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="glass-card p-12 flex flex-col items-center justify-center text-center min-h-[300px]">
+                                <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
+                                    <span className="material-symbols-outlined text-4xl text-white/40">touch_app</span>
+                                </div>
+                                <h3 className="text-xl font-bold text-white/70 glass-text">Selecciona una institución</h3>
+                                <p className="text-white/40 text-sm mt-2">Elige una institución para ver sus productos</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Empty State */}
                     {institutions.length === 0 && cashProducts.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-20 bg-card border-2 border-dashed border-border rounded-2xl">
-                            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                                <svg className="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                </svg>
+                        <div className="lg:col-span-12 glass-card p-12 flex flex-col items-center justify-center text-center">
+                            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-8 relative">
+                                <div className="absolute inset-0 bg-blue-500/20 rounded-3xl animate-ping" />
+                                <span className="material-symbols-outlined text-blue-400 text-5xl relative z-10">wallet</span>
                             </div>
-                            <h3 className="text-foreground text-xl font-semibold mb-2">No tienes cuentas registradas</h3>
-                            <p className="text-muted-foreground mb-6">Comienza agregando una institución o efectivo</p>
-                            <div className="flex gap-3">
-                                <AddInstitutionButton />
-                                <AddProductButton institutions={institutions} />
-                            </div>
+                            <h3 className="text-white text-3xl font-black mb-4 tracking-tight glass-text">Tu billetera está vacía</h3>
+                            <p className="text-white/60 font-medium mb-8 text-center max-w-sm text-lg">
+                                Comienza agregando tus cuentas bancarias, billeteras virtuales o efectivo para un control inteligente.
+                            </p>
+                            <AddActionMenu institutions={institutions} />
                         </div>
                     )}
                 </div>
-            </div>
 
-            {/* Panel de Detalles */}
-            {selectedProductId && selectedProduct && (
-                <ProductDetailsPanel
-                    product={selectedProduct}
-                    institutionName={selectedInstitution?.name || 'Efectivo'}
-                    onClose={handleClosePanel}
-                />
-            )}
+                {/* Product Details Panel */}
+                {selectedProduct && selectedInstitution && (
+                    <ProductDetailsPanel
+                        product={selectedProduct}
+                        institutionName={selectedInstitution.name}
+                        institutionId={selectedInstitution.id}
+                        availableAccounts={allLiquidityAccounts}
+                        onClose={() => setSelectedProduct(null)}
+                    />
+                )}
+            </div>
         </div>
     );
 }

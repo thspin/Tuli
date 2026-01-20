@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { updateTransaction, deleteTransaction } from '@/src/actions/transactions/transaction-actions';
 import { getCategories } from '@/src/actions/categories/category-actions';
 import { Modal, Input, Select, Button } from '@/src/components/ui';
+import { toISODate } from '@/src/utils/date';
 
 interface Transaction {
     id: string;
@@ -11,6 +12,7 @@ interface Transaction {
     date: Date | string;
     description: string;
     type: string;
+    planZ?: boolean | null;
     installmentNumber?: number | null;
     installmentTotal?: number | null;
     category?: {
@@ -64,10 +66,9 @@ export default function EditTransactionModal({
     // Form state
     const [description, setDescription] = useState(transaction.description);
     const [amount, setAmount] = useState(String(transaction.amount));
-    const [dateValue, setDateValue] = useState(
-        new Date(transaction.date).toISOString().split('T')[0]
-    );
+    const [dateValue, setDateValue] = useState(toISODate(transaction.date));
     const [categoryId, setCategoryId] = useState(transaction.category?.id || '');
+    const [isPlanZ, setIsPlanZ] = useState(transaction.planZ || false);
 
     // Load categories
     useEffect(() => {
@@ -80,8 +81,9 @@ export default function EditTransactionModal({
     useEffect(() => {
         setDescription(transaction.description);
         setAmount(String(transaction.amount));
-        setDateValue(new Date(transaction.date).toISOString().split('T')[0]);
+        setDateValue(toISODate(transaction.date));
         setCategoryId(transaction.category?.id || '');
+        setIsPlanZ(transaction.planZ || false);
         setShowDeleteConfirm(false);
         setError(null);
     }, [transaction]);
@@ -104,6 +106,8 @@ export default function EditTransactionModal({
         formData.set('amount', amount);
         formData.set('date', dateValue);
         formData.set('categoryId', categoryId);
+        if (isPlanZ) formData.set('planZ', 'true');
+        else formData.set('planZ', 'false');
 
         try {
             const result = await updateTransaction(transaction.id, formData);
@@ -144,97 +148,139 @@ export default function EditTransactionModal({
     const product = transaction.fromProduct || transaction.toProduct;
     const isTransfer = transaction.type === 'TRANSFER';
     const isInstallment = transaction.installmentNumber && transaction.installmentTotal;
+    const isNaranja = product?.name?.toLowerCase().includes('naranja');
+    const canBePlanZ = isNaranja && (!transaction.installmentTotal || transaction.installmentTotal === 1);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Editar Transacción" size="md">
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Detalles de Transacción"
+            description="Actualiza o elimina la transacción seleccionada"
+            icon={<span className="material-symbols-outlined">receipt_long</span>}
+            size="md"
+        >
             {error && (
-                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg text-sm">
+                <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm animate-shake">
+                    <span className="material-symbols-outlined text-[20px]">error</span>
                     {error}
                 </div>
             )}
 
             {showDeleteConfirm ? (
-                <div className="space-y-4">
-                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                        <p className="text-red-700 dark:text-red-300 font-medium mb-2">
-                            ⚠️ ¿Estás seguro de eliminar esta transacción?
-                        </p>
-                        <p className="text-sm text-red-600 dark:text-red-400">
-                            <strong>{transaction.description}</strong><br />
-                            Monto: ${Math.abs(transaction.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                <div className="space-y-6">
+                    <div className="p-6 bg-red-50 border border-red-100 rounded-[28px] space-y-4">
+                        <div className="flex items-center gap-3 text-red-600 font-bold uppercase tracking-wider text-xs">
+                            <span className="material-symbols-outlined">warning</span>
+                            ¿Confirmar eliminación?
+                        </div>
+                        <div>
+                            <p className="text-slate-900 font-bold text-lg">{transaction.description}</p>
+                            <p className="text-red-600 font-bold">
+                                {transaction.amount < 0 ? '-' : ''}
+                                ${Math.abs(transaction.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            </p>
+                        </div>
+                        <p className="text-xs text-slate-500 italic">
+                            * Esta acción revertirá los cambios en el balance de {product?.name}
                         </p>
                         {isInstallment && (
-                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
-                                ⚠️ Esta es la cuota {transaction.installmentNumber}/{transaction.installmentTotal}.
-                                Solo se eliminará esta cuota, no las demás.
-                            </p>
+                            <div className="p-3 bg-white/50 rounded-xl border border-red-100 text-[10px] text-red-500 font-bold uppercase">
+                                ⚠️ Cuota {transaction.installmentNumber}/{transaction.installmentTotal}. Solo se eliminará esta cuota.
+                            </div>
                         )}
-                        <p className="text-xs text-red-500 mt-2">
-                            Esta acción revertirá los cambios de balance y no se puede deshacer.
-                        </p>
                     </div>
-                    <div className="flex gap-3">
-                        <button
+                    <div className="flex gap-4">
+                        <Button
                             onClick={() => setShowDeleteConfirm(false)}
-                            className="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 rounded-lg font-medium transition-colors"
+                            variant="secondary"
+                            className="flex-1"
                         >
                             Cancelar
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={handleDelete}
-                            disabled={isDeleting}
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                            variant="danger"
+                            loading={isDeleting}
+                            className="flex-1"
+                            icon={<span className="material-symbols-outlined">delete_forever</span>}
                         >
-                            {isDeleting ? 'Eliminando...' : 'Sí, Eliminar'}
-                        </button>
+                            Sí, Eliminar
+                        </Button>
                     </div>
                 </div>
             ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Transaction Info */}
-                    <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <span>{isTransfer ? '🔄' : transaction.type === 'INCOME' ? '💰' : '💸'}</span>
-                            <span className="font-medium">
-                                {isTransfer ? 'Transferencia' : transaction.type === 'INCOME' ? 'Ingreso' : 'Gasto'}
-                            </span>
-                            {product && (
-                                <>
-                                    <span>•</span>
-                                    <span>{product.name}</span>
-                                </>
-                            )}
+                <form onSubmit={handleSubmit} className="space-y-8">
+                    {/* Header Info Banner */}
+                    <div className="p-5 bg-slate-50 border border-slate-100 rounded-[28px] flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg ${isTransfer ? 'bg-blue-600 shadow-blue-100' :
+                                transaction.type === 'INCOME' ? 'bg-emerald-500 shadow-emerald-100' : 'bg-red-500 shadow-red-100'
+                                }`}>
+                                <span className="material-symbols-outlined">
+                                    {isTransfer ? 'sync_alt' : transaction.type === 'INCOME' ? 'add_card' : 'payments'}
+                                </span>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                    {isTransfer ? 'Transferencia' : transaction.type === 'INCOME' ? 'Ingreso' : 'Egreso'}
+                                </p>
+                                <p className="font-bold text-slate-900">{product?.name || 'Desconocido'}</p>
+                            </div>
                         </div>
                         {isInstallment && (
-                            <p className="text-xs text-blue-500 mt-1">
+                            <div className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-bold uppercase tracking-tight">
                                 Cuota {transaction.installmentNumber}/{transaction.installmentTotal}
-                            </p>
+                            </div>
                         )}
                     </div>
 
-                    <Input
-                        type="date"
-                        label="Fecha"
-                        value={dateValue}
-                        onChange={(e) => setDateValue(e.target.value)}
-                        required
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Input
+                            type="date"
+                            label="Fecha de operación"
+                            value={dateValue}
+                            onChange={(e) => setDateValue(e.target.value)}
+                            required
+                        />
+                        <Input
+                            type="number"
+                            label="Monto"
+                            step="0.01"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            required
+                        />
+                    </div>
+
+                    {canBePlanZ && (
+                        <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <span className="material-symbols-outlined text-orange-600">credit_score</span>
+                                <div>
+                                    <p className="text-sm font-bold text-orange-900">Plan Z</p>
+                                    <p className="text-xs text-orange-700">Se financiará en el resumen</p>
+                                </div>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={isPlanZ}
+                                    onChange={(e) => setIsPlanZ(e.target.checked)}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-orange-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                            </label>
+                        </div>
+                    )}
 
                     <Input
                         type="text"
-                        label="Descripción"
+                        label="Descripción detallada"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         required
-                    />
-
-                    <Input
-                        type="number"
-                        label="Monto"
-                        step="0.01"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        required
+                        placeholder="Ej: Pago de servicios..."
                     />
 
                     {!isTransfer && (
@@ -252,31 +298,38 @@ export default function EditTransactionModal({
                         </Select>
                     )}
 
-                    <div className="flex gap-3 pt-4">
-                        <button
+                    <div className="flex gap-4 pt-4">
+                        <Button
                             type="button"
+                            variant="danger"
                             onClick={() => setShowDeleteConfirm(true)}
-                            className="px-4 py-2 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg font-medium transition-colors text-sm"
+                            className="px-6"
+                            icon={<span className="material-symbols-outlined">delete</span>}
                         >
-                            🗑️ Eliminar
-                        </button>
-                        <button
+                            Eliminar
+                        </Button>
+                        <Button
                             type="button"
+                            variant="secondary"
                             onClick={onClose}
-                            className="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 rounded-lg font-medium transition-colors"
+                            className="flex-1"
                         >
-                            Cancelar
-                        </button>
-                        <button
+                            Cerrar
+                        </Button>
+                        <Button
                             type="submit"
-                            disabled={isSubmitting}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                            variant="primary"
+                            loading={isSubmitting}
+                            className="flex-[2]"
+                            icon={<span className="material-symbols-outlined">save</span>}
                         >
-                            {isSubmitting ? 'Guardando...' : 'Guardar'}
-                        </button>
+                            Guardar Cambios
+                        </Button>
                     </div>
                 </form>
             )}
         </Modal>
     );
 }
+
+

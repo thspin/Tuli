@@ -118,7 +118,7 @@ export default function EditProductModal({
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Editar ${PRODUCT_TYPE_LABELS[product.type]}`} size="md">
+        <Modal isOpen={isOpen} onClose={onClose} title={`Editar ${PRODUCT_TYPE_LABELS[product.type]}`} size="sm">
             {error && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg text-sm">
                     {error}
@@ -177,14 +177,16 @@ export default function EditProductModal({
                         required
                     />
 
-                    <Input
-                        type="number"
-                        label="Saldo Actual"
-                        step="0.01"
-                        value={balance}
-                        onChange={(e) => setBalance(e.target.value)}
-                        required
-                    />
+                    {!isCredit && (
+                        <Input
+                            type="number"
+                            label="Saldo Actual"
+                            step="0.01"
+                            value={balance}
+                            onChange={(e) => setBalance(e.target.value)}
+                            required
+                        />
+                    )}
 
                     {isCard && (
                         <Input

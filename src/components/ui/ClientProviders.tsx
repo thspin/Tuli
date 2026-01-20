@@ -1,7 +1,11 @@
 'use client'
 
-import { ThemeProvider } from './ThemeProvider'
+import { ErrorBoundary } from "./ErrorBoundary";
 
 export function ClientProviders({ children }: { children: React.ReactNode }) {
-    return <ThemeProvider>{children}</ThemeProvider>
+    return (
+        <ErrorBoundary>
+            {children}
+        </ErrorBoundary>
+    )
 }

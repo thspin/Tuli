@@ -13,14 +13,15 @@ model User {
   email        String                 @unique
   name         String?
   createdAt    DateTime               @default(now())
+  categories   Category[]
+  summaries    CreditCardSummary[]
+  debts        Debt[]
   institutions FinancialInstitution[]
   products     FinancialProduct[]
-  categories   Category[]
-  transactions Transaction[]
-  debts        Debt[]
-  summaries    CreditCardSummary[]
   services     Service[]
   serviceBills ServiceBill[]
+  transactions Transaction[]
+  notes        Note[]
 }
 
 model Category {
@@ -31,32 +32,31 @@ model Category {
   isSystem     Boolean       @default(false)
   userId       String
   user         User          @relation(fields: [userId], references: [id])
-  transactions Transaction[]
   services     Service[]
+  transactions Transaction[]
 }
 
 model Transaction {
-  id                String          @id @default(uuid())
+  id                String            @id @default(uuid())
   amount            Decimal
   date              DateTime
   description       String
-  status            String          @default("COMPLETED")
+  status            String            @default("COMPLETED")
+  planZ             Boolean           @default(false)
   type              TransactionType
   categoryId        String?
-  category          Category?       @relation(fields: [categoryId], references: [id])
   installmentNumber Int?
   installmentTotal  Int?
-  installmentId     String?         // ID to group installments of the same purchase
+  installmentId     String?
   userId            String
-  user              User            @relation(fields: [userId], references: [id])
-
-  // New Relations
-  fromProductId String
-  fromProduct   FinancialProduct @relation("FromProduct", fields: [fromProductId], references: [id])
-  toProductId   String?
-  toProduct     FinancialProduct? @relation("ToProduct", fields: [toProductId], references: [id])
-  
-  serviceBill   ServiceBill?
+  fromProductId     String
+  toProductId       String?
+  serviceBill       ServiceBill?
+  summaryItems      SummaryItem[]
+  category          Category?         @relation(fields: [categoryId], references: [id])
+  fromProduct       FinancialProduct  @relation("FromProduct", fields: [fromProductId], references: [id])
+  toProduct         FinancialProduct? @relation("ToProduct", fields: [toProductId], references: [id])
+  user              User              @relation(fields: [userId], references: [id])
 }
 
 model Debt {
@@ -71,70 +71,107 @@ model Debt {
 }
 
 model FinancialInstitution {
-  id        String             @id @default(uuid())
-  name      String
-  type      InstitutionType
-  userId    String
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products  FinancialProduct[]
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  id           String             @id @default(uuid())
+  name         String
+  type         InstitutionType
+  userId       String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  shareSummary Boolean            @default(false)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products     FinancialProduct[]
+  summaries    CreditCardSummary[]
+  notes        Note[]
 
   @@unique([userId, name])
 }
 
 model FinancialProduct {
-  id                 String               @id @default(uuid())
+  id                 String                @id @default(uuid())
   name               String
   type               ProductType
-  currency           Currency             @default(ARS)
-  balance            Decimal              @default(0.0)
+  currency           Currency              @default(ARS)
+  balance            Decimal               @default(0.0)
   closingDay         Int?
   dueDay             Int?
-  limit              Decimal?             // Deprecated - keeping for backward compatibility
-  limitSinglePayment Decimal?             // Límite para compras en un solo pago
-  limitInstallments  Decimal?             // Límite para compras en cuotas
-  sharedLimit        Boolean              @default(false) // Si comparte límite con otras tarjetas
-  unifiedLimit       Boolean              @default(false) // Si usa el mismo límite para cuotas y 1 pago
-  lastFourDigits     String?              // Últimos 4 dígitos de la tarjeta
-  provider           CardProvider?        // Proveedor de la tarjeta (Visa, Mastercard, etc)
+  limit              Decimal?
+  limitSinglePayment Decimal?
+  limitInstallments  Decimal?
+  sharedLimit        Boolean               @default(false)
+  unifiedLimit       Boolean               @default(false)
+  lastFourDigits     String?
+  expirationDate     DateTime?             // Card plastic expiration date
+  provider           CardProvider?
   institutionId      String?
-  institution        FinancialInstitution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  
-  // Self-relation for Debit Cards linked to Savings Accounts
   linkedProductId    String?
-  linkedProduct      FinancialProduct?    @relation("LinkedProduct", fields: [linkedProductId], references: [id])
-  linkedByProducts   FinancialProduct[]   @relation("LinkedProduct")
-
   userId             String
-  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactionsOrigin Transaction[]        @relation("FromProduct")
-  transactionsDest   Transaction[]        @relation("ToProduct")
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  paidSummaries      CreditCardSummary[]   @relation("SummaryPayment")
   summaries          CreditCardSummary[]
+  institution        FinancialInstitution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  linkedProduct      FinancialProduct?     @relation("LinkedProduct", fields: [linkedProductId], references: [id])
+  linkedByProducts   FinancialProduct[]    @relation("LinkedProduct")
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   paymentRules       ServicePaymentRule[]
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  transactionsOrigin Transaction[]         @relation("FromProduct")
+  transactionsDest   Transaction[]         @relation("ToProduct")
 
   @@unique([institutionId, name, currency, userId])
 }
 
 model CreditCardSummary {
-  id                String           @id @default(uuid())
-  productId         String
-  product           FinancialProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
-  year              Int
-  month             Int              // 1-12
-  closingDate       DateTime         // Fecha de cierre del resumen
-  dueDate           DateTime         // Fecha de vencimiento
-  totalAmount       Decimal          @default(0.0) // Total a pagar
-  isClosed          Boolean          @default(false) // false = Parcial, true = Definitivo
-  userId            String
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  id                   String              @id @default(uuid())
+  institutionId        String?
+  productId            String
+  year                 Int
+  month                Int
+  closingDate          DateTime
+  dueDate              DateTime
+  totalAmount          Decimal             @default(0.0)
+  isClosed             Boolean             @default(false)
+  userId               String
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  adjustmentsAmount    Decimal             @default(0.0)
+  calculatedAmount     Decimal             @default(0.0)
+  paidDate             DateTime?
+  paidFromProductId    String?
+  paymentTransactionId String?             @unique
+  status               SummaryStatus       @default(DRAFT)
+  paidFromProduct      FinancialProduct?   @relation("SummaryPayment", fields: [paidFromProductId], references: [id])
+  product              FinancialProduct    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  institution          FinancialInstitution? @relation(fields: [institutionId], references: [id])
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adjustments          SummaryAdjustment[]
+  items                SummaryItem[]
 
-  @@unique([productId, year, month])
+  @@unique([institutionId, productId, year, month])
   @@index([userId, productId])
+}
+
+model SummaryItem {
+  id             String            @id @default(uuid())
+  summaryId      String
+  transactionId  String
+  amount         Decimal
+  isReconciled   Boolean           @default(false)
+  hasDiscrepancy Boolean           @default(false)
+  note           String?
+  summary        CreditCardSummary @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+  transaction    Transaction       @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@unique([summaryId, transactionId])
+}
+
+model SummaryAdjustment {
+  id          String            @id @default(uuid())
+  summaryId   String
+  type        AdjustmentType
+  description String
+  amount      Decimal
+  createdAt   DateTime          @default(now())
+  summary     CreditCardSummary @relation(fields: [summaryId], references: [id], onDelete: Cascade)
 }
 
 model ExchangeRate {
@@ -148,70 +185,53 @@ model ExchangeRate {
   @@index([timestamp])
 }
 
-// --- SERVICES MODULE ---
-
 model Service {
-  id             String @id @default(uuid())
-  name           String
-  defaultAmount  Decimal?
-  defaultDueDay  Int?   // 1-31, optional for manual services
-  
-  // Renewal / Management
-  renewalDate    DateTime? // Fecha de vencimiento de la promo/descuento
-  renewalNote    String?   // Notas sobre la renovación (ej. "Llamar al 0800...")
-  
-  categoryId     String
-  category       Category @relation(fields: [categoryId], references: [id])
-  
-  userId         String
-  user           User     @relation(fields: [userId], references: [id])
-  
-  bills          ServiceBill[]
-  paymentRules   ServicePaymentRule[] 
-  
-  active         Boolean @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String               @id @default(uuid())
+  name          String
+  defaultAmount Decimal?
+  defaultDueDay Int?
+  renewalDate   DateTime?
+  renewalNote   String?
+  categoryId    String
+  userId        String
+  active        Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  category      Category             @relation(fields: [categoryId], references: [id])
+  user          User                 @relation(fields: [userId], references: [id])
+  bills         ServiceBill[]
+  paymentRules  ServicePaymentRule[]
 }
 
 model ServiceBill {
-  id          String   @id @default(uuid())
-  serviceId   String
-  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  
-  dueDate     DateTime 
-  amount      Decimal  
-  
-  status      BillStatus @default(PENDING)
-  
-  transactionId String? @unique
+  id            String       @id @default(uuid())
+  serviceId     String
+  dueDate       DateTime
+  amount        Decimal
+  status        BillStatus   @default(PENDING)
+  transactionId String?      @unique
+  month         Int
+  year          Int
+  userId        String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  service       Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   transaction   Transaction? @relation(fields: [transactionId], references: [id])
-  
-  month       Int
-  year        Int
-  
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  user          User         @relation(fields: [userId], references: [id])
 
   @@unique([serviceId, year, month])
 }
 
 model ServicePaymentRule {
-  id          String   @id @default(uuid())
+  id          String             @id @default(uuid())
   serviceId   String
-  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  
   productId   String
-  product     FinancialProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  benefitType ServiceBenefitType 
-  value       Decimal // Percentage (e.g., 10 for 10%) or Fixed Amount
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  benefitType ServiceBenefitType
+  value       Decimal
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  product     FinancialProduct   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  service     Service            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@unique([serviceId, productId])
 }
@@ -223,11 +243,9 @@ enum BillStatus {
 }
 
 enum ServiceBenefitType {
-  DISCOUNT   // Descuento inmediato en el pago
-  CASHBACK   // Reintegro posterior
+  DISCOUNT
+  CASHBACK
 }
-
-// --- END SERVICES MODULE ---
 
 enum TransactionType {
   INCOME
@@ -267,4 +285,37 @@ enum CardProvider {
   MASTERCARD
   AMEX
   OTHER
+}
+
+enum SummaryStatus {
+  DRAFT
+  CLOSED
+  PAID
+}
+
+enum AdjustmentType {
+  COMMISSION
+  TAX
+  INTEREST
+  INSURANCE
+  CREDIT
+  OTHER
+}
+
+model Note {
+  id          String    @id @default(uuid())
+  title       String
+  content     String?
+  color       String    @default("yellow")
+  deadline    DateTime?
+  isRecurring Boolean   @default(false)
+  isCompleted Boolean   @default(false)
+  userId      String
+  institutionId String?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution FinancialInstitution? @relation(fields: [institutionId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
 }

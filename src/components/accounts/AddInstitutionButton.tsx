@@ -3,14 +3,16 @@
 import { useState } from 'react';
 import { createInstitution, updateInstitution, deleteInstitution } from '@/src/actions/accounts/account-actions';
 import { Institution } from '@/src/types';
-import { Modal, Button } from '@/src/components/ui';
+import { Modal, Input, Select, Button } from '@/src/components/ui';
 
 interface AddInstitutionButtonProps {
   mode?: 'create' | 'edit';
   institution?: Institution;
+  variant?: 'default' | 'menuItem';
+  onCloseMenu?: () => void;
 }
 
-export default function AddInstitutionButton({ mode = 'create', institution }: AddInstitutionButtonProps) {
+export default function AddInstitutionButton({ mode = 'create', institution, variant = 'default', onCloseMenu }: AddInstitutionButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,7 +49,6 @@ export default function AddInstitutionButton({ mode = 'create', institution }: A
   const handleDelete = async () => {
     if (!institution || mode !== 'edit') return;
 
-    // Confirmación manejada por UI
     setIsSubmitting(true);
     setError(null);
 
@@ -68,19 +69,45 @@ export default function AddInstitutionButton({ mode = 'create', institution }: A
 
   return (
     <>
-      {mode === 'create' ? (
-        <Button onClick={() => setIsOpen(true)} variant="primary">
-          + Nueva Institución
+      {variant === 'menuItem' ? (
+        <button
+          onClick={() => {
+            setIsOpen(true);
+            onCloseMenu?.();
+          }}
+          className="w-full flex items-center gap-4 px-4 py-4 text-sm text-white hover:bg-white/[0.08] transition-all duration-300 rounded-2xl group relative overflow-hidden"
+        >
+          <div className="relative flex-shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 flex items-center justify-center text-white/80 group-hover:text-white group-hover:scale-110 transition-all duration-500 shadow-xl overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <span className="material-symbols-outlined text-[24px] relative z-10">account_balance</span>
+          </div>
+
+          <div className="flex flex-col items-start gap-0.5 relative z-10">
+            <span className="font-bold text-[15px] tracking-tight text-white/90 group-hover:text-white transition-colors">
+              Nueva Institución
+            </span>
+            <span className="text-[10px] text-white/40 uppercase tracking-[0.08em] font-bold">
+              Bancos o billeteras
+            </span>
+          </div>
+
+          <div className="ml-auto opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+            <span className="material-symbols-outlined text-white/40 text-[20px]">chevron_right</span>
+          </div>
+
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent -translate-x-full group-hover:animate-shimmer" />
+        </button>
+      ) : mode === 'create' ? (
+        <Button onClick={() => setIsOpen(true)} variant="primary" size="sm" icon={<span className="material-symbols-outlined">add_circle</span>}>
+          Nueva Institución
         </Button>
       ) : (
         <button
           onClick={() => setIsOpen(true)}
-          className="text-gray-400 hover:text-blue-600 transition-colors p-1"
+          className="text-white/40 hover:text-blue-400 transition-colors p-1"
           title="Editar institución"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-          </svg>
+          <span className="material-symbols-outlined">edit_square</span>
         </button>
       )}
 
@@ -91,102 +118,111 @@ export default function AddInstitutionButton({ mode = 'create', institution }: A
             setIsOpen(false);
             setError(null);
           }}
-          title={mode === 'edit' ? 'Editar Institución' : 'Nueva Institución Financiera'}
+          title={mode === 'edit' ? 'Editar Institución' : 'Nueva Institución'}
+          description={mode === 'edit' ? 'Modifica los datos de la entidad' : 'Registra un nuevo banco o billetera'}
+          icon={<span className="material-symbols-outlined">account_balance</span>}
+          size="sm"
         >
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400 text-sm">
+              <span className="material-symbols-outlined text-[20px]">error</span>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre de la Institución
-              </label>
-              <input
-                type="text"
-                name="name"
-                defaultValue={institution?.name}
-                placeholder="Ej: Banco Galicia, Mercado Pago"
-                required
-                disabled={isSubmitting}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Input
+              label="Nombre de la Institución"
+              name="name"
+              defaultValue={institution?.name}
+              placeholder="Ej: Banco Galicia, Mercado Pago"
+              required
+              disabled={isSubmitting}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Institución
-              </label>
-              <select
+            <div className="space-y-3">
+              <Select
+                label="Tipo de Institución"
                 name="type"
                 defaultValue={institution?.type || 'BANK'}
                 required
                 disabled={isSubmitting}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               >
-                <option value="BANK">Banco</option>
-                <option value="WALLET">Billetera Virtual</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
-                Los bancos permiten ARS y USD. Las billeteras virtuales también permiten crypto.
+                <option value="BANK" className="bg-slate-800">🏦 Banco</option>
+                <option value="WALLET" className="bg-slate-800">📱 Billetera Virtual</option>
+              </Select>
+
+              {/* Unified Summary Toggle - Glass Style */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 mt-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-white">Resumen Unificado</h4>
+                  <p className="text-xs text-white/50">
+                    Todas las tarjetas comparten el mismo resumen
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="shareSummary"
+                    value="true"
+                    defaultChecked={institution?.shareSummary || false}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                </label>
+              </div>
+
+              <p className="px-2 text-[10px] text-white/40 leading-relaxed italic mt-2">
+                * Los bancos permiten ARS y USD. Las billeteras virtuales también permiten crypto.
               </p>
             </div>
 
-            <div className="flex gap-3 pt-4">
-              <button
+            <div className="flex gap-4 pt-4">
+              <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="primary"
+                loading={isSubmitting}
+                className="flex-[2]"
+                icon={<span className="material-symbols-outlined">check_circle</span>}
               >
-                {isSubmitting ? 'Procesando...' : mode === 'edit' ? 'Guardar Cambios' : 'Crear Institución'}
-              </button>
+                {mode === 'edit' ? 'Guardar Cambios' : 'Crear Institución'}
+              </Button>
 
               {mode === 'edit' && (
-                <>
+                <div className="flex-1 flex">
                   {!showDeleteConfirm ? (
-                    <button
+                    <Button
                       type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowDeleteConfirm(true);
-                      }}
+                      variant="danger"
+                      onClick={() => setShowDeleteConfirm(true)}
                       disabled={isSubmitting}
-                      className="px-4 bg-red-100 hover:bg-red-200 text-red-700 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full"
                     >
                       Eliminar
-                    </button>
+                    </Button>
                   ) : (
-                    <div className="flex gap-2">
-                      <button
+                    <div className="flex gap-2 w-full">
+                      <Button
                         type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setShowDeleteConfirm(false);
-                        }}
+                        variant="secondary"
+                        onClick={() => setShowDeleteConfirm(false)}
                         disabled={isSubmitting}
-                        className="px-3 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium transition-colors text-sm"
+                        className="flex-1"
                       >
-                        Cancelar
-                      </button>
-                      <button
+                        No
+                      </Button>
+                      <Button
                         type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleDelete();
-                        }}
+                        variant="danger"
+                        onClick={handleDelete}
                         disabled={isSubmitting}
-                        className="px-3 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-medium transition-colors text-sm"
+                        className="flex-1"
                       >
-                        Confirmar
-                      </button>
+                        Sí
+                      </Button>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
           </form>

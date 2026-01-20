@@ -36,12 +36,15 @@ export default function EditBillModal({ isOpen, onClose, bill, onSuccess }: Edit
     }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Editar Boleta - ${bill.service.name}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={`Editar Boleta - ${bill.service.name}`} size="sm">
             <form action={handleSubmit} className="space-y-4">
-                <div className="bg-muted/30 p-3 rounded-lg text-sm text-muted-foreground mb-4">
-                    <p>Período: <b className="capitalize">
-                        {new Date(bill.year, bill.month - 1).toLocaleString('es-AR', { month: 'long', year: 'numeric' })}
-                    </b></p>
+                {/* Period Info - Glass Style */}
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10 mb-4">
+                    <p className="text-sm text-white/70">
+                        Período: <b className="capitalize text-white">
+                            {new Date(bill.year, bill.month - 1).toLocaleString('es-AR', { month: 'long', year: 'numeric' })}
+                        </b>
+                    </p>
                 </div>
 
                 <Input
@@ -62,15 +65,15 @@ export default function EditBillModal({ isOpen, onClose, bill, onSuccess }: Edit
                 />
 
                 {bill.status !== 'PAID' && (
-                    <div className="w-full">
-                        <label className="block text-sm font-medium text-foreground mb-2">Estado</label>
+                    <div className="w-full space-y-2">
+                        <label className="block text-[11px] font-bold text-white/50 uppercase tracking-widest ml-1">Estado</label>
                         <select
                             name="status"
-                            className="w-full p-3 border border-border rounded-xl bg-background text-foreground"
+                            className="w-full glass-input text-white"
                             defaultValue={bill.status}
                         >
-                            <option value="PENDING">Pendiente</option>
-                            <option value="SKIPPED">Saltado</option>
+                            <option value="PENDING" className="bg-slate-800">Pendiente</option>
+                            <option value="SKIPPED" className="bg-slate-800">Saltado</option>
                         </select>
                     </div>
                 )}

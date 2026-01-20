@@ -1,35 +1,16 @@
 'use server'
 
-import { prisma } from "@/src/lib/db/prisma";
+import { prisma } from "@/src/lib/prisma";
+import { requireUser } from "@/src/lib/auth";
 import { revalidatePath } from "next/cache";
-
-/**
- * Obtiene o crea el usuario demo
- */
-async function getDemoUser() {
-    const userEmail = 'demo@financetracker.com';
-    let user = await prisma.user.findUnique({
-        where: { email: userEmail }
-    });
-
-    if (!user) {
-        user = await prisma.user.create({
-            data: {
-                email: userEmail,
-                name: 'Usuario Demo',
-            }
-        });
-    }
-
-    return user;
-}
+import { parseLocalDatePicker } from "@/src/utils/date";
 
 /**
  * Registra un ingreso de dinero en un producto
  */
 export async function addIncome(formData: FormData): Promise<{ success: boolean; error?: string }> {
     try {
-        const user = await getDemoUser();
+        const user = await requireUser();
 
         // Extraer datos del formulario
         const productId = formData.get('productId') as string;
@@ -51,8 +32,8 @@ export async function addIncome(formData: FormData): Promise<{ success: boolean;
             throw new Error('La descripción es requerida');
         }
 
-        // Parsear fecha
-        const date = dateStr ? new Date(dateStr) : new Date();
+        // Parsear fecha correctamente para evitar problemas de timezone
+        const date = dateStr ? parseLocalDatePicker(dateStr) : new Date();
 
         // Obtener el producto
         const product = await prisma.financialProduct.findUnique({
