@@ -5,6 +5,9 @@ import { getAccountsPageData } from '@/src/actions/accounts/account-actions';
 import AddTransactionButton from '@/src/components/transactions/AddTransactionButton';
 import AddTransferButton from '@/src/components/accounts/AddTransferButton';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
     const { institutions, cashProducts } = await getAccountsPageData();
 

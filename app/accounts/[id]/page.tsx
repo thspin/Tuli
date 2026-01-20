@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import TransactionList from './TransactionList';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
     const data = await getProductDetails(id);
